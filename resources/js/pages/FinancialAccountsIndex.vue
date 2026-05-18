@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
 import { ref, computed } from 'vue';
-import { CreditCard, Edit2, Trash2, Plus, Search } from 'lucide-vue-next';
+import { CreditCard, Edit2, Trash2, Plus, Search, Download, Printer } from 'lucide-vue-next';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
@@ -160,6 +160,25 @@ const formatCurrency = (value: number) => {
                     class="rounded-lg border-gray-200 bg-gray-50 pl-10 dark:border-gray-700 dark:bg-gray-800"
                 />
             </div>
+        </div>
+
+        <!-- Export/Print Buttons -->
+        <div class="flex flex-wrap gap-2">
+            <a
+                :href="route('accounts.export.csv')"
+                class="inline-flex items-center gap-2 rounded-lg bg-blue-500 px-4 py-2 text-white hover:bg-blue-600 transition"
+            >
+                <Download class="h-4 w-4" />
+                Export CSV
+            </a>
+            <a
+                :href="route('accounts.export.print')"
+                target="_blank"
+                class="inline-flex items-center gap-2 rounded-lg bg-gray-500 px-4 py-2 text-white hover:bg-gray-600 transition"
+            >
+                <Printer class="h-4 w-4" />
+                Print Report
+            </a>
         </div>
 
         <!-- Accounts Table - Responsive -->

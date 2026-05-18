@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import { ref, computed } from 'vue';
-import { Edit2, Trash2, Plus, Search, Download } from 'lucide-vue-next';
+import { Edit2, Trash2, Plus, Search, Download, Printer } from 'lucide-vue-next';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
@@ -315,6 +315,25 @@ const getCategoryName = (categoryId: number) => {
                     Apply Filters
                 </Button>
             </div>
+        </div>
+
+        <!-- Export/Print Buttons -->
+        <div class="flex flex-wrap gap-2">
+            <a
+                :href="route('transactions.export.csv')"
+                class="inline-flex items-center gap-2 rounded-lg bg-blue-500 px-4 py-2 text-white hover:bg-blue-600 transition"
+            >
+                <Download class="h-4 w-4" />
+                Export CSV
+            </a>
+            <a
+                :href="route('transactions.export.print')"
+                target="_blank"
+                class="inline-flex items-center gap-2 rounded-lg bg-gray-500 px-4 py-2 text-white hover:bg-gray-600 transition"
+            >
+                <Printer class="h-4 w-4" />
+                Print Report
+            </a>
         </div>
 
         <!-- Transactions Table - Responsive -->
