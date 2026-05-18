@@ -9,6 +9,7 @@ use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -19,9 +20,18 @@ class ProfileController extends Controller
      */
     public function edit(Request $request): Response
     {
+        $user = $request->user();
+        
         return Inertia::render('settings/Profile', [
             'mustVerifyEmail' => $request->user() instanceof MustVerifyEmail,
             'status' => $request->session()->get('status'),
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'photo_path' => $user->photo_path,
+                'photo_url' => $user->photo_path ? Storage::url($user->photo_path) : null,
+            ],
         ]);
     }
 
@@ -30,17 +40,31 @@ class ProfileController extends Controller
      */
     public function update(ProfileUpdateRequest $request): RedirectResponse
     {
-        $request->user()->fill($request->validated());
+        $user = $request->user();
+        $validated = $request->validated();
 
-        if ($request->user()->isDirty('email')) {
-            $request->user()->email_verified_at = null;
+        // Handle photo upload
+        if ($request->hasFile('photo')) {
+            // Delete old photo if exists
+            if ($user->photo_path && Storage::exists($user->photo_path)) {
+                Storage::delete($user->photo_path);
+            }
+            
+            // Store new photo
+            $path = $request->file('photo')->store('profiles', 'public');
+            $validated['photo_path'] = $path;
         }
 
-        $request->user()->save();
+        $user->fill($validated);
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('Profile updated.')]);
+        if ($user->isDirty('email')) {
+            $user->email_verified_at = null;
+        }
 
-        return to_route('profile.edit');
+        $user->save();
+
+        return redirect()->route('profile.edit')
+            ->with('success', 'Profile updated successfully!');
     }
 
     /**
@@ -49,6 +73,11 @@ class ProfileController extends Controller
     public function destroy(ProfileDeleteRequest $request): RedirectResponse
     {
         $user = $request->user();
+
+        // Delete user's photo if exists
+        if ($user->photo_path && Storage::exists($user->photo_path)) {
+            Storage::delete($user->photo_path);
+        }
 
         Auth::logout();
 

@@ -17,6 +17,27 @@ class ProfileUpdateRequest extends FormRequest
      */
     public function rules(): array
     {
-        return $this->profileRules($this->user()->id);
+        $rules = $this->profileRules($this->user()->id);
+        
+        // Add photo validation
+        $rules['photo'] = ['nullable', 'image', 'max:5120', 'mimes:jpg,jpeg,png'];
+        
+        return $rules;
+    }
+
+    /**
+     * Get custom validation messages.
+     */
+    public function messages(): array
+    {
+        return [
+            'name.required' => 'Name is required.',
+            'email.required' => 'Email is required.',
+            'email.email' => 'Email must be a valid email address.',
+            'email.unique' => 'This email is already in use.',
+            'photo.image' => 'Photo must be an image file.',
+            'photo.max' => 'Photo must not exceed 5MB.',
+            'photo.mimes' => 'Photo must be JPG, JPEG, or PNG.',
+        ];
     }
 }
