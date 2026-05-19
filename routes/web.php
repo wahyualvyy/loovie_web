@@ -9,6 +9,8 @@ use App\Http\Controllers\TransactionExportController;
 use App\Http\Controllers\NoteExportController;
 use App\Http\Controllers\AccountExportController;
 use App\Http\Controllers\UserManagementController;
+use App\Http\Controllers\BudgetController;
+use App\Http\Controllers\ReportController;
 use Illuminate\Support\Facades\Route;
 
 Route::inertia('/', 'Welcome')->name('home');
@@ -52,6 +54,29 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::delete('/data-master/users/{user}', [UserManagementController::class, 'destroy'])
         ->name('users.destroy');
+
+    // Budget routes
+    Route::get('/budgets', [BudgetController::class, 'index'])
+        ->name('budgets.index');
+
+    Route::post('/budgets', [BudgetController::class, 'store'])
+        ->name('budgets.store');
+
+    Route::put('/budgets/{budget}', [BudgetController::class, 'update'])
+        ->name('budgets.update');
+
+    Route::delete('/budgets/{budget}', [BudgetController::class, 'destroy'])
+        ->name('budgets.destroy');
+
+    // Report routes
+    Route::get('/reports', [ReportController::class, 'index'])
+        ->name('reports.index');
+
+    Route::get('/reports/export/csv', [ReportController::class, 'exportCSV'])
+        ->name('reports.export.csv');
+
+    Route::get('/reports/export/print', [ReportController::class, 'printReport'])
+        ->name('reports.export.print');
 });
 
 require __DIR__ . '/settings.php';

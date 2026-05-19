@@ -8,6 +8,7 @@ import {
     Search,
     Download,
     Printer,
+    Tag,
 } from 'lucide-vue-next';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -103,15 +104,12 @@ const confirmDelete = (transaction: TransactionItem) => {
 
 const deleteTransaction = () => {
     if (transactionToDelete.value) {
-        router.delete(
-            `/transactions/${transactionToDelete.value.id}`,
-            {
-                onSuccess: () => {
-                    showDeleteConfirm.value = false;
-                    transactionToDelete.value = null;
-                },
+        router.delete(`/transactions/${transactionToDelete.value.id}`, {
+            onSuccess: () => {
+                showDeleteConfirm.value = false;
+                transactionToDelete.value = null;
             },
-        );
+        });
     }
 };
 
@@ -340,6 +338,13 @@ const getCategoryName = (categoryId: number) => {
             >
                 <Printer class="h-4 w-4" />
                 Print Report
+            </a>
+            <a
+                href="/categories"
+                class="inline-flex items-center gap-2 rounded-lg bg-gray-500 px-4 py-2 text-white transition hover:bg-gray-600"
+            >
+                <Tag class="h-4 w-4" />
+                Categories
             </a>
         </div>
 
@@ -627,4 +632,3 @@ const getCategoryName = (categoryId: number) => {
         </div>
     </div>
 </template>
-

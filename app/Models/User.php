@@ -52,6 +52,11 @@ class User extends Authenticatable
         return $this->role === 'admin';
     }
 
+    public function budgets()
+    {
+        return $this->hasMany(Budget::class);
+    }
+
     protected function casts(): array
     {
         return [

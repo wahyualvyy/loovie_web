@@ -7,6 +7,8 @@ import {
     FileText,
     CreditCard,
     Database,
+    BarChart3,
+    PiggyBank,
 } from 'lucide-vue-next';
 
 import AppLogo from '@/components/AppLogo.vue';
@@ -41,6 +43,16 @@ const mainNavItems = computed<NavItem[]>(() => {
             title: 'Transactions',
             href: '/transactions',
             icon: TrendingUp,
+        },
+        {
+            title: 'Budget',
+            href: '/budgets',
+            icon: PiggyBank,
+        },
+        {
+            title: 'Reports',
+            href: '/reports',
+            icon: BarChart3,
         },
         {
             title: 'Notes',

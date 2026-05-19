@@ -11,6 +11,8 @@ import {
     FileText,
     Landmark,
     NotebookText,
+    PiggyBank,
+    AlertTriangle,
 } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
 
@@ -79,6 +81,32 @@ interface ChartData {
     expense: number[];
 }
 
+interface BudgetItem {
+    id: number;
+    category_id?: number;
+    category_name: string;
+    category_color: string;
+    month?: string;
+    amount: number;
+    used_amount: number;
+    remaining_amount: number;
+    percentage: number;
+    status: 'safe' | 'warning' | 'over';
+    description?: string | null;
+}
+
+interface BudgetSummary {
+    month: string;
+    totalAccountBalance: number;
+    totalBudget: number;
+    totalUsed: number;
+    totalRemaining: number;
+    unallocatedBalance: number;
+    totalPercentage: number;
+    warnings: BudgetItem[];
+    items: BudgetItem[];
+}
+
 interface Props {
     totalBalance: number;
     monthlyIncome: number;
@@ -90,6 +118,7 @@ interface Props {
     accountSummary: Account[];
     selectedYear: number;
     availableYears: number[];
+    budgetSummary: BudgetSummary;
 }
 
 const props = defineProps<Props>();
@@ -102,6 +131,22 @@ const safeAvailableYears = computed(() => {
     }
 
     return [new Date().getFullYear()];
+});
+
+const safeBudgetSummary = computed<BudgetSummary>(() => {
+    return (
+        props.budgetSummary || {
+            month: new Date().toISOString().slice(0, 7),
+            totalAccountBalance: 0,
+            totalBudget: 0,
+            totalUsed: 0,
+            totalRemaining: 0,
+            unallocatedBalance: 0,
+            totalPercentage: 0,
+            warnings: [],
+            items: [],
+        }
+    );
 });
 
 const combinedChartData = computed(() => {
@@ -201,17 +246,9 @@ const formatCurrency = (value: number | string | null | undefined) => {
 };
 
 const formatCompactCurrency = (value: number) => {
-    if (value >= 1_000_000_000) {
-        return `Rp${Math.round(value / 1_000_000_000)}M`;
-    }
-
-    if (value >= 1_000_000) {
-        return `Rp${Math.round(value / 1_000_000)}Jt`;
-    }
-
-    if (value >= 1_000) {
-        return `Rp${Math.round(value / 1_000)}Rb`;
-    }
+    if (value >= 1_000_000_000) return `Rp${Math.round(value / 1_000_000_000)}M`;
+    if (value >= 1_000_000) return `Rp${Math.round(value / 1_000_000)}Jt`;
+    if (value >= 1_000) return `Rp${Math.round(value / 1_000)}Rb`;
 
     return `Rp${value}`;
 };
@@ -229,9 +266,7 @@ const formatDate = (date: string | null | undefined) => {
 const truncateContent = (content: string | null | undefined, limit = 90) => {
     if (!content) return '-';
 
-    if (content.length <= limit) {
-        return content;
-    }
+    if (content.length <= limit) return content;
 
     return `${content.substring(0, limit)}...`;
 };
@@ -250,6 +285,32 @@ const netStatusText = computed(() => {
 
     return 'Seimbang bulan ini';
 });
+
+const getBudgetStatusLabel = (status: string) => {
+    if (status === 'over') return 'Melebihi Budget';
+    if (status === 'warning') return 'Hampir Limit';
+
+    return 'Aman';
+};
+
+const getBudgetStatusClass = (status: string) => {
+    if (status === 'over') {
+        return 'bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300';
+    }
+
+    if (status === 'warning') {
+        return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-950 dark:text-yellow-300';
+    }
+
+    return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300';
+};
+
+const getBudgetProgressClass = (status: string) => {
+    if (status === 'over') return 'bg-red-500';
+    if (status === 'warning') return 'bg-yellow-500';
+
+    return 'bg-emerald-500';
+};
 </script>
 
 <template>
@@ -257,15 +318,13 @@ const netStatusText = computed(() => {
 
     <div class="space-y-6 p-4 sm:p-6 lg:p-8">
         <!-- Header -->
-        <div
-            class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
-        >
+        <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
                 <h1 class="text-2xl font-bold text-gray-900 sm:text-3xl dark:text-white">
                     Dashboard
                 </h1>
                 <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
-                    Ringkasan keuangan, transaksi, akun, dan catatan terbaru.
+                    Ringkasan keuangan, budget, transaksi, akun, dan catatan terbaru.
                 </p>
             </div>
 
@@ -290,9 +349,7 @@ const netStatusText = computed(() => {
 
         <!-- Summary Cards -->
         <div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <div
-                class="rounded-2xl border border-blue-100 bg-white p-5 shadow-sm dark:border-blue-900/40 dark:bg-gray-900"
-            >
+            <div class="rounded-2xl border border-blue-100 bg-white p-5 shadow-sm dark:border-blue-900/40 dark:bg-gray-900">
                 <div class="flex items-center justify-between">
                     <div>
                         <p class="text-sm font-medium text-gray-500 dark:text-gray-400">
@@ -303,9 +360,7 @@ const netStatusText = computed(() => {
                         </p>
                     </div>
 
-                    <div
-                        class="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-950 dark:text-blue-300"
-                    >
+                    <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-950 dark:text-blue-300">
                         <Wallet class="h-6 w-6" />
                     </div>
                 </div>
@@ -315,9 +370,7 @@ const netStatusText = computed(() => {
                 </p>
             </div>
 
-            <div
-                class="rounded-2xl border border-emerald-100 bg-white p-5 shadow-sm dark:border-emerald-900/40 dark:bg-gray-900"
-            >
+            <div class="rounded-2xl border border-emerald-100 bg-white p-5 shadow-sm dark:border-emerald-900/40 dark:bg-gray-900">
                 <div class="flex items-center justify-between">
                     <div>
                         <p class="text-sm font-medium text-gray-500 dark:text-gray-400">
@@ -328,22 +381,18 @@ const netStatusText = computed(() => {
                         </p>
                     </div>
 
-                    <div
-                        class="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-300"
-                    >
+                    <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-300">
                         <TrendingUp class="h-6 w-6" />
                     </div>
                 </div>
 
                 <div class="mt-4 flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400">
                     <ArrowUpRight class="h-3.5 w-3.5" />
-                    Income transaction summary
+                    Ringkasan pemasukan bulan ini
                 </div>
             </div>
 
-            <div
-                class="rounded-2xl border border-red-100 bg-white p-5 shadow-sm dark:border-red-900/40 dark:bg-gray-900"
-            >
+            <div class="rounded-2xl border border-red-100 bg-white p-5 shadow-sm dark:border-red-900/40 dark:bg-gray-900">
                 <div class="flex items-center justify-between">
                     <div>
                         <p class="text-sm font-medium text-gray-500 dark:text-gray-400">
@@ -354,22 +403,18 @@ const netStatusText = computed(() => {
                         </p>
                     </div>
 
-                    <div
-                        class="flex h-12 w-12 items-center justify-center rounded-xl bg-red-50 text-red-600 dark:bg-red-950 dark:text-red-300"
-                    >
+                    <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-red-50 text-red-600 dark:bg-red-950 dark:text-red-300">
                         <TrendingDown class="h-6 w-6" />
                     </div>
                 </div>
 
                 <div class="mt-4 flex items-center gap-1 text-xs text-red-600 dark:text-red-400">
                     <ArrowDownRight class="h-3.5 w-3.5" />
-                    Expense transaction summary
+                    Ringkasan pengeluaran bulan ini
                 </div>
             </div>
 
-            <div
-                class="rounded-2xl border border-purple-100 bg-white p-5 shadow-sm dark:border-purple-900/40 dark:bg-gray-900"
-            >
+            <div class="rounded-2xl border border-purple-100 bg-white p-5 shadow-sm dark:border-purple-900/40 dark:bg-gray-900">
                 <div class="flex items-center justify-between">
                     <div>
                         <p class="text-sm font-medium text-gray-500 dark:text-gray-400">
@@ -387,9 +432,7 @@ const netStatusText = computed(() => {
                         </p>
                     </div>
 
-                    <div
-                        class="flex h-12 w-12 items-center justify-center rounded-xl bg-purple-50 text-purple-600 dark:bg-purple-950 dark:text-purple-300"
-                    >
+                    <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-purple-50 text-purple-600 dark:bg-purple-950 dark:text-purple-300">
                         <CreditCard class="h-6 w-6" />
                     </div>
                 </div>
@@ -400,13 +443,231 @@ const netStatusText = computed(() => {
             </div>
         </div>
 
-        <!-- Main Chart -->
-        <div
-            class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900"
-        >
+        <!-- Budget Overview -->
+        <div class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+            <div class="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 dark:bg-indigo-950 dark:text-indigo-300">
+                        <PiggyBank class="h-5 w-5" />
+                    </div>
+
+                    <div>
+                        <h2 class="text-lg font-semibold text-gray-900 dark:text-white">
+                            Budget Bulanan
+                        </h2>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">
+                            Pantau penggunaan budget bulan {{ safeBudgetSummary.month }}.
+                        </p>
+                    </div>
+                </div>
+
+                <Link
+                    href="/budgets"
+                    class="inline-flex items-center justify-center rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
+                >
+                    Kelola Budget
+                </Link>
+            </div>
+
             <div
-                class="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+                v-if="safeBudgetSummary.totalBudget <= 0"
+                class="rounded-xl border border-dashed border-gray-200 py-10 text-center dark:border-gray-700"
             >
+                <PiggyBank class="mx-auto h-10 w-10 text-gray-400" />
+
+                <h3 class="mt-3 font-semibold text-gray-900 dark:text-white">
+                    Belum ada budget bulan ini
+                </h3>
+
+                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                    Buat budget untuk mengontrol pengeluaran tiap kategori.
+                </p>
+
+                <Link
+                    href="/budgets"
+                    class="mt-4 inline-flex rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                >
+                    Tambah Budget
+                </Link>
+            </div>
+
+            <div v-else class="space-y-5">
+                <div class="grid grid-cols-1 gap-4 md:grid-cols-5">
+                    <div class="rounded-xl bg-gray-50 p-4 dark:bg-gray-800">
+                        <p class="text-sm text-gray-500 dark:text-gray-400">
+                            Saldo Akun
+                        </p>
+                        <p class="mt-2 text-xl font-bold text-gray-900 dark:text-white">
+                            {{ formatCurrency(safeBudgetSummary.totalAccountBalance) }}
+                        </p>
+                    </div>
+
+                    <div class="rounded-xl bg-gray-50 p-4 dark:bg-gray-800">
+                        <p class="text-sm text-gray-500 dark:text-gray-400">
+                            Budget
+                        </p>
+                        <p class="mt-2 text-xl font-bold text-indigo-600 dark:text-indigo-400">
+                            {{ formatCurrency(safeBudgetSummary.totalBudget) }}
+                        </p>
+                    </div>
+
+                    <div class="rounded-xl bg-gray-50 p-4 dark:bg-gray-800">
+                        <p class="text-sm text-gray-500 dark:text-gray-400">
+                            Belum Dialokasikan
+                        </p>
+                        <p
+                            :class="[
+                                'mt-2 text-xl font-bold',
+                                safeBudgetSummary.unallocatedBalance >= 0
+                                    ? 'text-emerald-600 dark:text-emerald-400'
+                                    : 'text-red-600 dark:text-red-400',
+                            ]"
+                        >
+                            {{ formatCurrency(safeBudgetSummary.unallocatedBalance) }}
+                        </p>
+                    </div>
+
+                    <div class="rounded-xl bg-gray-50 p-4 dark:bg-gray-800">
+                        <p class="text-sm text-gray-500 dark:text-gray-400">
+                            Terpakai
+                        </p>
+                        <p class="mt-2 text-xl font-bold text-red-600 dark:text-red-400">
+                            {{ formatCurrency(safeBudgetSummary.totalUsed) }}
+                        </p>
+                    </div>
+
+                    <div class="rounded-xl bg-gray-50 p-4 dark:bg-gray-800">
+                        <p class="text-sm text-gray-500 dark:text-gray-400">
+                            Sisa Budget
+                        </p>
+                        <p
+                            :class="[
+                                'mt-2 text-xl font-bold',
+                                safeBudgetSummary.totalRemaining >= 0
+                                    ? 'text-emerald-600 dark:text-emerald-400'
+                                    : 'text-red-600 dark:text-red-400',
+                            ]"
+                        >
+                            {{ formatCurrency(safeBudgetSummary.totalRemaining) }}
+                        </p>
+                    </div>
+                </div>
+
+                <div>
+                    <div class="mb-1 flex justify-between text-xs text-gray-500 dark:text-gray-400">
+                        <span>Total penggunaan budget</span>
+                        <span>{{ safeBudgetSummary.totalPercentage }}%</span>
+                    </div>
+
+                    <div class="h-3 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800">
+                        <div
+                            class="h-full rounded-full transition-all"
+                            :class="
+                                safeBudgetSummary.totalPercentage >= 100
+                                    ? 'bg-red-500'
+                                    : safeBudgetSummary.totalPercentage >= 80
+                                      ? 'bg-yellow-500'
+                                      : 'bg-emerald-500'
+                            "
+                            :style="{
+                                width: Math.min(safeBudgetSummary.totalPercentage, 100) + '%',
+                            }"
+                        ></div>
+                    </div>
+                </div>
+
+                <div
+                    v-if="safeBudgetSummary.warnings && safeBudgetSummary.warnings.length > 0"
+                    class="rounded-xl border border-yellow-200 bg-yellow-50 p-4 dark:border-yellow-900 dark:bg-yellow-950/40"
+                >
+                    <div class="mb-3 flex items-center gap-2">
+                        <AlertTriangle class="h-5 w-5 text-yellow-600 dark:text-yellow-300" />
+                        <h3 class="font-semibold text-yellow-800 dark:text-yellow-200">
+                            Peringatan Budget
+                        </h3>
+                    </div>
+
+                    <div class="space-y-2">
+                        <div
+                            v-for="budget in safeBudgetSummary.warnings"
+                            :key="budget.id"
+                            class="flex flex-col gap-2 rounded-lg bg-white p-3 text-sm dark:bg-gray-900 sm:flex-row sm:items-center sm:justify-between"
+                        >
+                            <div>
+                                <p class="font-medium text-gray-900 dark:text-white">
+                                    {{ budget.category_name }}
+                                </p>
+                                <p class="text-gray-500 dark:text-gray-400">
+                                    Terpakai {{ formatCurrency(budget.used_amount) }}
+                                    dari {{ formatCurrency(budget.amount) }}
+                                </p>
+                            </div>
+
+                            <span
+                                :class="[
+                                    'w-fit rounded-full px-3 py-1 text-xs font-medium',
+                                    getBudgetStatusClass(budget.status),
+                                ]"
+                            >
+                                {{ getBudgetStatusLabel(budget.status) }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+                    <div
+                        v-for="budget in safeBudgetSummary.items"
+                        :key="budget.id"
+                        class="rounded-xl border border-gray-100 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-800"
+                    >
+                        <div class="mb-3 flex items-center justify-between gap-2">
+                            <div class="flex min-w-0 items-center gap-2">
+                                <div
+                                    class="h-8 w-8 shrink-0 rounded-full"
+                                    :style="{ backgroundColor: budget.category_color }"
+                                ></div>
+
+                                <div class="min-w-0">
+                                    <p class="truncate text-sm font-semibold text-gray-900 dark:text-white">
+                                        {{ budget.category_name }}
+                                    </p>
+                                    <p class="text-xs text-gray-500 dark:text-gray-400">
+                                        {{ budget.percentage }}% terpakai
+                                    </p>
+                                </div>
+                            </div>
+
+                            <span
+                                :class="[
+                                    'shrink-0 rounded-full px-2 py-1 text-xs font-medium',
+                                    getBudgetStatusClass(budget.status),
+                                ]"
+                            >
+                                {{ getBudgetStatusLabel(budget.status) }}
+                            </span>
+                        </div>
+
+                        <div class="mb-1 flex justify-between text-xs text-gray-500 dark:text-gray-400">
+                            <span>{{ formatCurrency(budget.used_amount) }}</span>
+                            <span>{{ formatCurrency(budget.amount) }}</span>
+                        </div>
+
+                        <div class="h-2 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
+                            <div
+                                class="h-full rounded-full transition-all"
+                                :class="getBudgetProgressClass(budget.status)"
+                                :style="{ width: Math.min(budget.percentage, 100) + '%' }"
+                            ></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Chart -->
+        <div class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+            <div class="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                     <h2 class="text-lg font-semibold text-gray-900 dark:text-white">
                         Pemasukan vs Pengeluaran
@@ -425,25 +686,17 @@ const netStatusText = computed(() => {
             </div>
 
             <div class="h-80">
-                <Bar
-                    :data="combinedChartData"
-                    :options="chartOptions"
-                />
+                <Bar :data="combinedChartData" :options="chartOptions" />
             </div>
         </div>
 
         <!-- Transactions + Accounts -->
         <div class="grid grid-cols-1 gap-6 xl:grid-cols-3">
-            <!-- Recent Transactions -->
             <div class="xl:col-span-2">
-                <div
-                    class="h-full rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900"
-                >
+                <div class="h-full rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900">
                     <div class="mb-4 flex items-center justify-between">
                         <div class="flex items-center gap-2">
-                            <div
-                                class="flex h-9 w-9 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600 dark:bg-indigo-950 dark:text-indigo-300"
-                            >
+                            <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600 dark:bg-indigo-950 dark:text-indigo-300">
                                 <FileText class="h-5 w-5" />
                             </div>
                             <h2 class="text-lg font-semibold text-gray-900 dark:text-white">
@@ -474,9 +727,7 @@ const netStatusText = computed(() => {
                         >
                             <div class="flex min-w-0 flex-1 items-center gap-3">
                                 <div
-                                    :style="{
-                                        backgroundColor: getTransactionColor(transaction),
-                                    }"
+                                    :style="{ backgroundColor: getTransactionColor(transaction) }"
                                     class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-semibold text-white"
                                 >
                                     {{ getTransactionInitial(transaction) }}
@@ -510,16 +761,11 @@ const netStatusText = computed(() => {
                 </div>
             </div>
 
-            <!-- Account Summary -->
             <div>
-                <div
-                    class="h-full rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900"
-                >
+                <div class="h-full rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900">
                     <div class="mb-4 flex items-center justify-between">
                         <div class="flex items-center gap-2">
-                            <div
-                                class="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-50 text-blue-600 dark:bg-blue-950 dark:text-blue-300"
-                            >
+                            <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-50 text-blue-600 dark:bg-blue-950 dark:text-blue-300">
                                 <Landmark class="h-5 w-5" />
                             </div>
                             <h2 class="text-lg font-semibold text-gray-900 dark:text-white">
@@ -573,14 +819,10 @@ const netStatusText = computed(() => {
         </div>
 
         <!-- Recent Notes -->
-        <div
-            class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900"
-        >
+        <div class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900">
             <div class="mb-4 flex items-center justify-between">
                 <div class="flex items-center gap-2">
-                    <div
-                        class="flex h-9 w-9 items-center justify-center rounded-lg bg-yellow-50 text-yellow-600 dark:bg-yellow-950 dark:text-yellow-300"
-                    >
+                    <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-yellow-50 text-yellow-600 dark:bg-yellow-950 dark:text-yellow-300">
                         <NotebookText class="h-5 w-5" />
                     </div>
                     <h2 class="text-lg font-semibold text-gray-900 dark:text-white">
@@ -603,10 +845,7 @@ const netStatusText = computed(() => {
                 Belum ada catatan.
             </div>
 
-            <div
-                v-else
-                class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3"
-            >
+            <div v-else class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
                 <div
                     v-for="note in recentNotes"
                     :key="note.id"
@@ -634,10 +873,7 @@ const netStatusText = computed(() => {
                             {{ note.label }}
                         </span>
 
-                        <span
-                            v-else
-                            class="text-xs text-gray-400"
-                        >
+                        <span v-else class="text-xs text-gray-400">
                             Tanpa label
                         </span>
                     </div>
