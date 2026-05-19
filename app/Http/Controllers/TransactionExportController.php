@@ -15,16 +15,16 @@ class TransactionExportController extends Controller
     public function exportCSV(Request $request): StreamedResponse
     {
         $user = Auth::user();
-        
+
         $filters = $request->only(['account_id', 'category_id', 'type', 'date_from', 'date_to', 'month']);
         $transactions = $this->getFilteredTransactions($user, $filters);
 
         $callback = function () use ($transactions) {
             $file = fopen('php://output', 'w');
-            
+
             // Header row with BOM for Excel UTF-8 support
-            fprintf($file, chr(0xEF).chr(0xBB).chr(0xBF));
-            
+            fprintf($file, chr(0xEF) . chr(0xBB) . chr(0xBF));
+
             fputcsv($file, [
                 'Date',
                 'Account',
@@ -61,10 +61,10 @@ class TransactionExportController extends Controller
     public function printReport(Request $request)
     {
         $user = Auth::user();
-        
+
         $filters = $request->only(['account_id', 'category_id', 'type', 'date_from', 'date_to', 'month']);
         $transactions = $this->getFilteredTransactions($user, $filters);
-        
+
         $totalIncome = $transactions->where('type', 'income')->sum('amount');
         $totalExpense = $transactions->where('type', 'expense')->sum('amount');
         $net = $totalIncome - $totalExpense;

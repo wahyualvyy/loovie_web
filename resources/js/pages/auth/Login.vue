@@ -31,7 +31,7 @@ const showPassword = ref(false);
 
 const submit = () => {
     processing.value = true;
-    form.post(route('login'), {
+    form.post('/login', {
         onFinish: () => {
             processing.value = false;
         },

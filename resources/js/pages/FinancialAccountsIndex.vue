@@ -1,7 +1,15 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
 import { ref, computed } from 'vue';
-import { CreditCard, Edit2, Trash2, Plus, Search, Download, Printer } from 'lucide-vue-next';
+import {
+    CreditCard,
+    Edit2,
+    Trash2,
+    Plus,
+    Search,
+    Download,
+    Printer,
+} from 'lucide-vue-next';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
@@ -90,7 +98,7 @@ const confirmDelete = (account: Account) => {
 const deleteAccount = () => {
     if (accountToDelete.value) {
         router.delete(
-            route('financial-accounts.destroy', accountToDelete.value.id),
+            `/financial-accounts/${accountToDelete.value.id}`,
             {
                 onSuccess: () => {
                     showDeleteConfirm.value = false;
@@ -129,7 +137,7 @@ const formatCurrency = (value: number) => {
                     Manage all your financial accounts
                 </p>
             </div>
-            <Link :href="route('financial-accounts.create')">
+            <Link href="/financial-accounts/create">
                 <Button class="bg-indigo-600 text-white hover:bg-indigo-700">
                     <Plus class="mr-2 h-4 w-4" />
                     Add Account
@@ -165,16 +173,16 @@ const formatCurrency = (value: number) => {
         <!-- Export/Print Buttons -->
         <div class="flex flex-wrap gap-2">
             <a
-                :href="route('accounts.export.csv')"
-                class="inline-flex items-center gap-2 rounded-lg bg-blue-500 px-4 py-2 text-white hover:bg-blue-600 transition"
+                href="/financial-accounts/export/csv"
+                class="inline-flex items-center gap-2 rounded-lg bg-blue-500 px-4 py-2 text-white transition hover:bg-blue-600"
             >
                 <Download class="h-4 w-4" />
                 Export CSV
             </a>
             <a
-                :href="route('accounts.export.print')"
+                href="/financial-accounts/export/print"
                 target="_blank"
-                class="inline-flex items-center gap-2 rounded-lg bg-gray-500 px-4 py-2 text-white hover:bg-gray-600 transition"
+                class="inline-flex items-center gap-2 rounded-lg bg-gray-500 px-4 py-2 text-white transition hover:bg-gray-600"
             >
                 <Printer class="h-4 w-4" />
                 Print Report
@@ -311,12 +319,7 @@ const formatCurrency = (value: number) => {
                                     class="flex items-center justify-center space-x-2"
                                 >
                                     <Link
-                                        :href="
-                                            route(
-                                                'financial-accounts.edit',
-                                                account.id,
-                                            )
-                                        "
+                                        :href="`/financial-accounts/${account.id}/edit`"
                                         class="inline-flex"
                                     >
                                         <Button
@@ -379,9 +382,7 @@ const formatCurrency = (value: number) => {
                         </div>
                         <div class="ml-2 flex items-center space-x-2">
                             <Link
-                                :href="
-                                    route('financial-accounts.edit', account.id)
-                                "
+                                :href="`/financial-accounts/${account.id}/edit`"
                             >
                                 <Button
                                     variant="ghost"

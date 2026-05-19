@@ -18,10 +18,10 @@ class ProfileUpdateRequest extends FormRequest
     public function rules(): array
     {
         $rules = $this->profileRules($this->user()->id);
-        
+
         // Add photo validation
         $rules['photo'] = ['nullable', 'image', 'max:5120', 'mimes:jpg,jpeg,png'];
-        
+
         return $rules;
     }
 

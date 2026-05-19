@@ -4,8 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
-{
+return new class extends Migration {
     public function up(): void
     {
         Schema::create('transactions', function (Blueprint $table) {
@@ -19,7 +18,7 @@ return new class extends Migration
             $table->text('description')->nullable(); // Deskripsi / keterangan
             $table->string('attachment')->nullable(); // Path untuk bukti/attachment
             $table->timestamps();
-            
+
             $table->index('user_id');
             $table->index('financial_account_id');
             $table->index('category_id');

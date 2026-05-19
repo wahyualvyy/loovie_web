@@ -19,10 +19,10 @@ class AccountExportController extends Controller
 
         $callback = function () use ($accounts) {
             $file = fopen('php://output', 'w');
-            
+
             // Header row with BOM for Excel UTF-8 support
-            fprintf($file, chr(0xEF).chr(0xBB).chr(0xBF));
-            
+            fprintf($file, chr(0xEF) . chr(0xBB) . chr(0xBF));
+
             fputcsv($file, [
                 'Account Name',
                 'Type',
@@ -58,7 +58,7 @@ class AccountExportController extends Controller
     {
         $user = Auth::user();
         $accounts = $user->financialAccounts()->orderBy('name')->get();
-        
+
         $totalBalance = $accounts->sum('current_balance');
         $totalInitialBalance = $accounts->sum('initial_balance');
 

@@ -21,7 +21,7 @@ class ProfileController extends Controller
     public function edit(Request $request): Response
     {
         $user = $request->user();
-        
+
         return Inertia::render('settings/Profile', [
             'mustVerifyEmail' => $request->user() instanceof MustVerifyEmail,
             'status' => $request->session()->get('status'),
@@ -49,7 +49,7 @@ class ProfileController extends Controller
             if ($user->photo_path && Storage::exists($user->photo_path)) {
                 Storage::delete($user->photo_path);
             }
-            
+
             // Store new photo
             $path = $request->file('photo')->store('profiles', 'public');
             $validated['photo_path'] = $path;

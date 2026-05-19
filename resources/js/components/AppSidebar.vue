@@ -1,6 +1,12 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
-import { BookOpen, FolderGit2, LayoutGrid, TrendingUp, FileText, CreditCard, Settings } from 'lucide-vue-next';
+import {
+    LayoutGrid,
+    TrendingUp,
+    FileText,
+    CreditCard,
+    Settings,
+} from 'lucide-vue-next';
 import AppLogo from '@/components/AppLogo.vue';
 import NavFooter from '@/components/NavFooter.vue';
 import NavMain from '@/components/NavMain.vue';
@@ -19,22 +25,22 @@ import type { NavItem } from '@/types';
 const mainNavItems: NavItem[] = [
     {
         title: 'Dashboard',
-        href: route('dashboard'),
+        href: '/dashboard',
         icon: LayoutGrid,
     },
     {
         title: 'Transactions',
-        href: route('transactions.index'),
+        href: '/transactions',
         icon: TrendingUp,
     },
     {
         title: 'Notes',
-        href: route('notes.index'),
+        href: '/notes',
         icon: FileText,
     },
     {
         title: 'Financial Accounts',
-        href: route('financial-accounts.index'),
+        href: '/financial-accounts',
         icon: CreditCard,
     },
 ];
@@ -42,7 +48,7 @@ const mainNavItems: NavItem[] = [
 const footerNavItems: NavItem[] = [
     {
         title: 'Settings',
-        href: route('profile.edit'),
+        href: '/settings/profile',
         icon: Settings,
     },
 ];
@@ -54,7 +60,7 @@ const footerNavItems: NavItem[] = [
             <SidebarMenu>
                 <SidebarMenuItem>
                     <SidebarMenuButton size="lg" as-child>
-                        <Link :href="route('dashboard')">
+                        <Link href="/dashboard">
                             <AppLogo />
                         </Link>
                     </SidebarMenuButton>
@@ -71,5 +77,6 @@ const footerNavItems: NavItem[] = [
             <NavUser />
         </SidebarFooter>
     </Sidebar>
+
     <slot />
 </template>

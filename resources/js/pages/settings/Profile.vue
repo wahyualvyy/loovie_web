@@ -69,7 +69,7 @@ const updateProfile = async () => {
     }
 
     try {
-        router.post(route('profile.update'), form, {
+        router.post('/settings/profile', form, {
             onSuccess: () => {
                 success.value = 'Profile updated successfully!';
                 setTimeout(() => (success.value = ''), 3000);
@@ -93,7 +93,7 @@ const updatePassword = async () => {
     success.value = '';
 
     try {
-        router.post(route('password.update'), passwordData.value, {
+        router.post('/settings/password', passwordData.value, {
             onSuccess: () => {
                 success.value = 'Password updated successfully!';
                 passwordData.value = {
@@ -128,7 +128,7 @@ const deleteAccount = () => {
             'Are you sure you want to delete your account? This action cannot be undone.',
         )
     ) {
-        router.delete(route('profile.destroy'), {
+        router.delete('/settings/profile', {
             onError: (err) => {
                 errors.value = err;
             },

@@ -168,7 +168,7 @@ class ProfileTest extends TestCase
     public function test_old_photo_is_deleted_when_new_photo_is_uploaded(): void
     {
         $oldFile = UploadedFile::fake()->image('avatar.jpg', 200, 200);
-        
+
         // Upload first photo
         $this->actingAs($this->user)
             ->post(route('profile.update'), [
@@ -182,7 +182,7 @@ class ProfileTest extends TestCase
 
         // Upload new photo
         $newFile = UploadedFile::fake()->image('avatar2.jpg', 200, 200);
-        
+
         $this->actingAs($this->user)
             ->post(route('profile.update'), [
                 'name' => $this->user->name,
@@ -279,7 +279,7 @@ class ProfileTest extends TestCase
     public function test_user_photo_is_deleted_when_account_is_deleted(): void
     {
         $file = UploadedFile::fake()->image('avatar.jpg', 200, 200);
-        
+
         $this->actingAs($this->user)
             ->post(route('profile.update'), [
                 'name' => $this->user->name,

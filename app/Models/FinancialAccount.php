@@ -47,9 +47,9 @@ class FinancialAccount extends Model
     public function calculateBalance(): void
     {
         $balance = $this->initial_balance;
-        
+
         $transactions = $this->transactions()->get();
-        
+
         foreach ($transactions as $transaction) {
             if ($transaction->type === 'income') {
                 $balance += $transaction->amount;

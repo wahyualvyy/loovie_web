@@ -6,11 +6,10 @@ import InputError from '@/components/InputError.vue';
 import PasswordInput from '@/components/PasswordInput.vue';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { edit } from '@/routes/security';
 
 type Props = {
     passwordRules: string;
-} ;
+};
 
 const props = defineProps<Props>();
 
@@ -19,7 +18,7 @@ defineOptions({
         breadcrumbs: [
             {
                 title: 'Security settings',
-                href: edit(),
+                href: '/settings/password',
             },
         ],
     },
@@ -54,6 +53,7 @@ defineOptions({
         >
             <div class="grid gap-2">
                 <Label for="current_password">Current password</Label>
+
                 <PasswordInput
                     id="current_password"
                     name="current_password"
@@ -61,11 +61,13 @@ defineOptions({
                     autocomplete="current-password"
                     placeholder="Current password"
                 />
+
                 <InputError :message="errors.current_password" />
             </div>
 
             <div class="grid gap-2">
                 <Label for="password">New password</Label>
+
                 <PasswordInput
                     id="password"
                     name="password"
@@ -74,11 +76,15 @@ defineOptions({
                     placeholder="New password"
                     :passwordrules="props.passwordRules"
                 />
+
                 <InputError :message="errors.password" />
             </div>
 
             <div class="grid gap-2">
-                <Label for="password_confirmation">Confirm password</Label>
+                <Label for="password_confirmation">
+                    Confirm password
+                </Label>
+
                 <PasswordInput
                     id="password_confirmation"
                     name="password_confirmation"
@@ -87,6 +93,7 @@ defineOptions({
                     placeholder="Confirm password"
                     :passwordrules="props.passwordRules"
                 />
+
                 <InputError :message="errors.password_confirmation" />
             </div>
 
@@ -100,6 +107,4 @@ defineOptions({
             </div>
         </Form>
     </div>
-
-
 </template>

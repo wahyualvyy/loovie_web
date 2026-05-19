@@ -1,11 +1,36 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
-import { CreditCard, TrendingUp, TrendingDown, Wallet, Calendar } from 'lucide-vue-next';
+import {
+    CreditCard,
+    TrendingUp,
+    TrendingDown,
+    Wallet,
+    Calendar,
+} from 'lucide-vue-next';
 import { ref, onMounted } from 'vue';
-import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend } from 'chart.js';
+import {
+    Chart as ChartJS,
+    CategoryScale,
+    LinearScale,
+    PointElement,
+    LineElement,
+    BarElement,
+    Title,
+    Tooltip,
+    Legend,
+} from 'chart.js';
 import { Line, Bar } from 'vue-chartjs';
 
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend);
+ChartJS.register(
+    CategoryScale,
+    LinearScale,
+    PointElement,
+    LineElement,
+    BarElement,
+    Title,
+    Tooltip,
+    Legend,
+);
 
 defineOptions({
     layout: {
@@ -166,7 +191,7 @@ const updateCharts = () => {
 
 const handleYearChange = (year: number) => {
     selectedYear.value = year;
-    router.get(route('dashboard'), { year }, { preserveScroll: true });
+    router.get('/dashboard', { year }, { preserveScroll: true });
 };
 
 const formatCurrency = (value: number) => {
@@ -195,72 +220,119 @@ const truncateContent = (content: string, limit: number = 80) => {
 <template>
     <Head title="Dashboard - Loovie Apps" />
 
-    <div class="p-4 sm:p-6 lg:p-8 space-y-6">
+    <div class="space-y-6 p-4 sm:p-6 lg:p-8">
         <!-- Header -->
-        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div
+            class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
+        >
             <div>
-                <h1 class="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white">Dashboard</h1>
-                <p class="text-gray-600 dark:text-gray-400 mt-1">Welcome back! Here's your financial overview</p>
+                <h1
+                    class="text-3xl font-bold text-gray-900 sm:text-4xl dark:text-white"
+                >
+                    Dashboard
+                </h1>
+                <p class="mt-1 text-gray-600 dark:text-gray-400">
+                    Welcome back! Here's your financial overview
+                </p>
             </div>
         </div>
 
         <!-- Summary Cards -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
             <!-- Total Balance -->
-            <div class="bg-gradient-to-br from-blue-500 to-blue-600 dark:from-blue-600 dark:to-blue-700 rounded-lg shadow-sm border border-blue-400 dark:border-blue-700 p-6 text-white">
-                <div class="flex items-center justify-between mb-2">
+            <div
+                class="rounded-lg border border-blue-400 bg-gradient-to-br from-blue-500 to-blue-600 p-6 text-white shadow-sm dark:border-blue-700 dark:from-blue-600 dark:to-blue-700"
+            >
+                <div class="mb-2 flex items-center justify-between">
                     <p class="text-sm font-medium opacity-90">Total Balance</p>
-                    <Wallet class="w-5 h-5 opacity-75" />
+                    <Wallet class="h-5 w-5 opacity-75" />
                 </div>
-                <p class="text-2xl sm:text-3xl font-bold">{{ formatCurrency(totalBalance) }}</p>
-                <p class="text-xs opacity-75 mt-2">All accounts combined</p>
+                <p class="text-2xl font-bold sm:text-3xl">
+                    {{ formatCurrency(totalBalance) }}
+                </p>
+                <p class="mt-2 text-xs opacity-75">All accounts combined</p>
             </div>
 
             <!-- Monthly Income -->
-            <div class="bg-gradient-to-br from-green-500 to-green-600 dark:from-green-600 dark:to-green-700 rounded-lg shadow-sm border border-green-400 dark:border-green-700 p-6 text-white">
-                <div class="flex items-center justify-between mb-2">
-                    <p class="text-sm font-medium opacity-90">This Month Income</p>
-                    <TrendingUp class="w-5 h-5 opacity-75" />
+            <div
+                class="rounded-lg border border-green-400 bg-gradient-to-br from-green-500 to-green-600 p-6 text-white shadow-sm dark:border-green-700 dark:from-green-600 dark:to-green-700"
+            >
+                <div class="mb-2 flex items-center justify-between">
+                    <p class="text-sm font-medium opacity-90">
+                        This Month Income
+                    </p>
+                    <TrendingUp class="h-5 w-5 opacity-75" />
                 </div>
-                <p class="text-2xl sm:text-3xl font-bold">{{ formatCurrency(monthlyIncome) }}</p>
-                <p class="text-xs opacity-75 mt-2">Income transactions</p>
+                <p class="text-2xl font-bold sm:text-3xl">
+                    {{ formatCurrency(monthlyIncome) }}
+                </p>
+                <p class="mt-2 text-xs opacity-75">Income transactions</p>
             </div>
 
             <!-- Monthly Expense -->
-            <div class="bg-gradient-to-br from-red-500 to-red-600 dark:from-red-600 dark:to-red-700 rounded-lg shadow-sm border border-red-400 dark:border-red-700 p-6 text-white">
-                <div class="flex items-center justify-between mb-2">
-                    <p class="text-sm font-medium opacity-90">This Month Expense</p>
-                    <TrendingDown class="w-5 h-5 opacity-75" />
+            <div
+                class="rounded-lg border border-red-400 bg-gradient-to-br from-red-500 to-red-600 p-6 text-white shadow-sm dark:border-red-700 dark:from-red-600 dark:to-red-700"
+            >
+                <div class="mb-2 flex items-center justify-between">
+                    <p class="text-sm font-medium opacity-90">
+                        This Month Expense
+                    </p>
+                    <TrendingDown class="h-5 w-5 opacity-75" />
                 </div>
-                <p class="text-2xl sm:text-3xl font-bold">{{ formatCurrency(monthlyExpense) }}</p>
-                <p class="text-xs opacity-75 mt-2">Expense transactions</p>
+                <p class="text-2xl font-bold sm:text-3xl">
+                    {{ formatCurrency(monthlyExpense) }}
+                </p>
+                <p class="mt-2 text-xs opacity-75">Expense transactions</p>
             </div>
 
             <!-- Net Balance -->
-            <div :class="['rounded-lg shadow-sm border p-6 text-white', netBalance >= 0 ? 'bg-gradient-to-br from-purple-500 to-purple-600 dark:from-purple-600 dark:to-purple-700 border-purple-400 dark:border-purple-700' : 'bg-gradient-to-br from-orange-500 to-orange-600 dark:from-orange-600 dark:to-orange-700 border-orange-400 dark:border-orange-700']">
-                <div class="flex items-center justify-between mb-2">
+            <div
+                :class="[
+                    'rounded-lg border p-6 text-white shadow-sm',
+                    netBalance >= 0
+                        ? 'border-purple-400 bg-gradient-to-br from-purple-500 to-purple-600 dark:border-purple-700 dark:from-purple-600 dark:to-purple-700'
+                        : 'border-orange-400 bg-gradient-to-br from-orange-500 to-orange-600 dark:border-orange-700 dark:from-orange-600 dark:to-orange-700',
+                ]"
+            >
+                <div class="mb-2 flex items-center justify-between">
                     <p class="text-sm font-medium opacity-90">Net Balance</p>
-                    <CreditCard class="w-5 h-5 opacity-75" />
+                    <CreditCard class="h-5 w-5 opacity-75" />
                 </div>
-                <p class="text-2xl sm:text-3xl font-bold">{{ formatCurrency(netBalance) }}</p>
-                <p class="text-xs opacity-75 mt-2">{{ netBalance >= 0 ? 'Surplus' : 'Deficit' }}</p>
+                <p class="text-2xl font-bold sm:text-3xl">
+                    {{ formatCurrency(netBalance) }}
+                </p>
+                <p class="mt-2 text-xs opacity-75">
+                    {{ netBalance >= 0 ? 'Surplus' : 'Deficit' }}
+                </p>
             </div>
         </div>
 
         <!-- Charts Section -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
             <!-- Monthly Income Chart -->
-            <div class="bg-white dark:bg-gray-900 rounded-lg shadow-sm border border-gray-200 dark:border-gray-800 p-6">
-                <div class="flex items-center justify-between mb-4">
-                    <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Monthly Income</h2>
+            <div
+                class="rounded-lg border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900"
+            >
+                <div class="mb-4 flex items-center justify-between">
+                    <h2
+                        class="text-lg font-semibold text-gray-900 dark:text-white"
+                    >
+                        Monthly Income
+                    </h2>
                     <div class="flex items-center gap-2">
-                        <Calendar class="w-4 h-4 text-gray-500" />
+                        <Calendar class="h-4 w-4 text-gray-500" />
                         <select
                             :value="selectedYear"
-                            @change="handleYearChange(Number($event.target.value))"
-                            class="px-3 py-1 rounded text-sm bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500"
+                            @change="
+                                handleYearChange(Number($event.target.value))
+                            "
+                            class="rounded border border-gray-200 bg-gray-50 px-3 py-1 text-sm text-gray-900 focus:ring-2 focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
                         >
-                            <option v-for="year in availableYears" :key="year" :value="year">
+                            <option
+                                v-for="year in availableYears"
+                                :key="year"
+                                :value="year"
+                            >
                                 {{ year }}
                             </option>
                         </select>
@@ -276,17 +348,29 @@ const truncateContent = (content: string, limit: number = 80) => {
             </div>
 
             <!-- Monthly Expense Chart -->
-            <div class="bg-white dark:bg-gray-900 rounded-lg shadow-sm border border-gray-200 dark:border-gray-800 p-6">
-                <div class="flex items-center justify-between mb-4">
-                    <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Monthly Expense</h2>
+            <div
+                class="rounded-lg border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900"
+            >
+                <div class="mb-4 flex items-center justify-between">
+                    <h2
+                        class="text-lg font-semibold text-gray-900 dark:text-white"
+                    >
+                        Monthly Expense
+                    </h2>
                     <div class="flex items-center gap-2">
-                        <Calendar class="w-4 h-4 text-gray-500" />
+                        <Calendar class="h-4 w-4 text-gray-500" />
                         <select
                             :value="selectedYear"
-                            @change="handleYearChange(Number($event.target.value))"
-                            class="px-3 py-1 rounded text-sm bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500"
+                            @change="
+                                handleYearChange(Number($event.target.value))
+                            "
+                            class="rounded border border-gray-200 bg-gray-50 px-3 py-1 text-sm text-gray-900 focus:ring-2 focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
                         >
-                            <option v-for="year in availableYears" :key="year" :value="year">
+                            <option
+                                v-for="year in availableYears"
+                                :key="year"
+                                :value="year"
+                            >
                                 {{ year }}
                             </option>
                         </select>
@@ -303,17 +387,25 @@ const truncateContent = (content: string, limit: number = 80) => {
         </div>
 
         <!-- Combined Chart -->
-        <div class="bg-white dark:bg-gray-900 rounded-lg shadow-sm border border-gray-200 dark:border-gray-800 p-6">
-            <div class="flex items-center justify-between mb-4">
-                <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Income vs Expense</h2>
+        <div
+            class="rounded-lg border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900"
+        >
+            <div class="mb-4 flex items-center justify-between">
+                <h2 class="text-lg font-semibold text-gray-900 dark:text-white">
+                    Income vs Expense
+                </h2>
                 <div class="flex items-center gap-2">
-                    <Calendar class="w-4 h-4 text-gray-500" />
+                    <Calendar class="h-4 w-4 text-gray-500" />
                     <select
                         :value="selectedYear"
                         @change="handleYearChange(Number($event.target.value))"
-                        class="px-3 py-1 rounded text-sm bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500"
+                        class="rounded border border-gray-200 bg-gray-50 px-3 py-1 text-sm text-gray-900 focus:ring-2 focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
                     >
-                        <option v-for="year in availableYears" :key="year" :value="year">
+                        <option
+                            v-for="year in availableYears"
+                            :key="year"
+                            :value="year"
+                        >
                             {{ year }}
                         </option>
                     </select>
@@ -329,43 +421,75 @@ const truncateContent = (content: string, limit: number = 80) => {
         </div>
 
         <!-- Recent Transactions & Notes & Accounts -->
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
             <!-- Recent Transactions -->
             <div class="lg:col-span-2">
-                <div class="bg-white dark:bg-gray-900 rounded-lg shadow-sm border border-gray-200 dark:border-gray-800 p-6">
-                    <div class="flex items-center justify-between mb-4">
-                        <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Recent Transactions</h2>
-                        <Link :href="route('transactions.index')" class="text-indigo-600 hover:text-indigo-700 text-sm font-medium">
+                <div
+                    class="rounded-lg border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900"
+                >
+                    <div class="mb-4 flex items-center justify-between">
+                        <h2
+                            class="text-lg font-semibold text-gray-900 dark:text-white"
+                        >
+                            Recent Transactions
+                        </h2>
+                        <Link
+                            href="/transactions"
+                            class="text-sm font-medium text-indigo-600 hover:text-indigo-700"
+                        >
                             View All
                         </Link>
                     </div>
-                    <div v-if="recentTransactions.length === 0" class="text-center py-8 text-gray-500">
+                    <div
+                        v-if="recentTransactions.length === 0"
+                        class="py-8 text-center text-gray-500"
+                    >
                         No transactions yet
                     </div>
                     <div v-else class="space-y-3">
                         <div
                             v-for="transaction in recentTransactions"
                             :key="transaction.id"
-                            class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                            class="flex items-center justify-between rounded-lg bg-gray-50 p-3 transition-colors hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700"
                         >
-                            <div class="flex items-center gap-3 flex-1 min-w-0">
+                            <div class="flex min-w-0 flex-1 items-center gap-3">
                                 <div
-                                    :style="{ backgroundColor: transaction.category_color }"
-                                    class="w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold text-sm flex-shrink-0"
+                                    :style="{
+                                        backgroundColor:
+                                            transaction.category_color,
+                                    }"
+                                    class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full text-sm font-semibold text-white"
                                 >
                                     {{ transaction.category_name.charAt(0) }}
                                 </div>
                                 <div class="min-w-0">
-                                    <p class="text-sm font-medium text-gray-900 dark:text-white truncate">
+                                    <p
+                                        class="truncate text-sm font-medium text-gray-900 dark:text-white"
+                                    >
                                         {{ transaction.category_name }}
                                     </p>
-                                    <p class="text-xs text-gray-500 dark:text-gray-400">
-                                        {{ transaction.account_name }} • {{ formatDate(transaction.transaction_date) }}
+                                    <p
+                                        class="text-xs text-gray-500 dark:text-gray-400"
+                                    >
+                                        {{ transaction.account_name }} •
+                                        {{
+                                            formatDate(
+                                                transaction.transaction_date,
+                                            )
+                                        }}
                                     </p>
                                 </div>
                             </div>
-                            <p :class="['text-sm font-semibold whitespace-nowrap ml-2', transaction.type === 'income' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400']">
-                                {{ transaction.type === 'income' ? '+' : '-' }}{{ formatCurrency(transaction.amount) }}
+                            <p
+                                :class="[
+                                    'ml-2 text-sm font-semibold whitespace-nowrap',
+                                    transaction.type === 'income'
+                                        ? 'text-green-600 dark:text-green-400'
+                                        : 'text-red-600 dark:text-red-400',
+                                ]"
+                            >
+                                {{ transaction.type === 'income' ? '+' : '-'
+                                }}{{ formatCurrency(transaction.amount) }}
                             </p>
                         </div>
                     </div>
@@ -373,29 +497,49 @@ const truncateContent = (content: string, limit: number = 80) => {
             </div>
 
             <!-- Account Summary -->
-            <div class="bg-white dark:bg-gray-900 rounded-lg shadow-sm border border-gray-200 dark:border-gray-800 p-6">
-                <div class="flex items-center justify-between mb-4">
-                    <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Accounts</h2>
-                    <Link :href="route('financial-accounts.index')" class="text-indigo-600 hover:text-indigo-700 text-sm font-medium">
+            <div
+                class="rounded-lg border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900"
+            >
+                <div class="mb-4 flex items-center justify-between">
+                    <h2
+                        class="text-lg font-semibold text-gray-900 dark:text-white"
+                    >
+                        Accounts
+                    </h2>
+                    <Link
+                        href="/financial-accounts"
+                        class="text-sm font-medium text-indigo-600 hover:text-indigo-700"
+                    >
                         Manage
                     </Link>
                 </div>
-                <div v-if="accountSummary.length === 0" class="text-center py-8 text-gray-500">
+                <div
+                    v-if="accountSummary.length === 0"
+                    class="py-8 text-center text-gray-500"
+                >
                     No accounts yet
                 </div>
                 <div v-else class="space-y-3">
                     <div
                         v-for="account in accountSummary"
                         :key="account.id"
-                        class="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg"
+                        class="rounded-lg bg-gray-50 p-3 dark:bg-gray-800"
                     >
-                        <div class="flex items-center justify-between mb-1">
-                            <p class="text-sm font-medium text-gray-900 dark:text-white">{{ account.name }}</p>
-                            <span class="text-xs px-2 py-1 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded">
+                        <div class="mb-1 flex items-center justify-between">
+                            <p
+                                class="text-sm font-medium text-gray-900 dark:text-white"
+                            >
+                                {{ account.name }}
+                            </p>
+                            <span
+                                class="rounded bg-gray-200 px-2 py-1 text-xs text-gray-700 dark:bg-gray-700 dark:text-gray-300"
+                            >
                                 {{ account.type }}
                             </span>
                         </div>
-                        <p class="text-lg font-bold text-gray-900 dark:text-white">
+                        <p
+                            class="text-lg font-bold text-gray-900 dark:text-white"
+                        >
                             {{ formatCurrency(account.current_balance) }}
                         </p>
                     </div>
@@ -404,32 +548,52 @@ const truncateContent = (content: string, limit: number = 80) => {
         </div>
 
         <!-- Recent Notes -->
-        <div class="bg-white dark:bg-gray-900 rounded-lg shadow-sm border border-gray-200 dark:border-gray-800 p-6">
-            <div class="flex items-center justify-between mb-4">
-                <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Recent Notes</h2>
-                <Link :href="route('notes.index')" class="text-indigo-600 hover:text-indigo-700 text-sm font-medium">
+        <div
+            class="rounded-lg border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900"
+        >
+            <div class="mb-4 flex items-center justify-between">
+                <h2 class="text-lg font-semibold text-gray-900 dark:text-white">
+                    Recent Notes
+                </h2>
+                        <Link
+                            href="/notes"
+                            class="text-sm font-medium text-indigo-600 hover:text-indigo-700"
+                        >
                     View All
                 </Link>
             </div>
-            <div v-if="recentNotes.length === 0" class="text-center py-8 text-gray-500">
+            <div
+                v-if="recentNotes.length === 0"
+                class="py-8 text-center text-gray-500"
+            >
                 No notes yet
             </div>
-            <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div
+                v-else
+                class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3"
+            >
                 <div
                     v-for="note in recentNotes"
                     :key="note.id"
-                    class="p-4 bg-gradient-to-br from-yellow-50 to-yellow-100 dark:from-yellow-900/20 dark:to-yellow-800/20 border border-yellow-200 dark:border-yellow-800 rounded-lg hover:shadow-md transition-shadow"
+                    class="rounded-lg border border-yellow-200 bg-gradient-to-br from-yellow-50 to-yellow-100 p-4 transition-shadow hover:shadow-md dark:border-yellow-800 dark:from-yellow-900/20 dark:to-yellow-800/20"
                 >
-                    <div class="flex items-start justify-between mb-2">
-                        <h3 class="text-sm font-semibold text-gray-900 dark:text-white line-clamp-1">
+                    <div class="mb-2 flex items-start justify-between">
+                        <h3
+                            class="line-clamp-1 text-sm font-semibold text-gray-900 dark:text-white"
+                        >
                             {{ note.title }}
                         </h3>
                     </div>
-                    <p class="text-xs text-gray-700 dark:text-gray-300 line-clamp-2 mb-3">
+                    <p
+                        class="mb-3 line-clamp-2 text-xs text-gray-700 dark:text-gray-300"
+                    >
                         {{ truncateContent(note.content, 80) }}
                     </p>
                     <div class="flex items-center justify-between">
-                        <span v-if="note.label" class="text-xs px-2 py-1 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded">
+                        <span
+                            v-if="note.label"
+                            class="rounded bg-gray-200 px-2 py-1 text-xs text-gray-700 dark:bg-gray-700 dark:text-gray-300"
+                        >
                             {{ note.label }}
                         </span>
                         <span class="text-xs text-gray-600 dark:text-gray-400">

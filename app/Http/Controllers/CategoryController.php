@@ -6,8 +6,8 @@ use App\Http\Requests\StoreCategoryRequest;
 use App\Http\Requests\UpdateCategoryRequest;
 use App\Models\Category;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Inertia\Inertia;
-use Illuminate\Inertia\Response;
+use Inertia\Inertia;
+use Inertia\Response;
 use Illuminate\Support\Facades\Redirect;
 
 class CategoryController extends Controller

@@ -13,7 +13,7 @@ class NoteController extends Controller
     public function index()
     {
         $user = Auth::user();
-        
+
         $notes = $user->notes()
             ->when(request('search'), function ($query) {
                 $search = request('search');

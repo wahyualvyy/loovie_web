@@ -1,7 +1,15 @@
 <script setup lang="ts">
 import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import { ref, computed } from 'vue';
-import { Edit2, Trash2, Plus, Search, Tag, Download, Printer } from 'lucide-vue-next';
+import {
+    Edit2,
+    Trash2,
+    Plus,
+    Search,
+    Tag,
+    Download,
+    Printer,
+} from 'lucide-vue-next';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
@@ -63,7 +71,7 @@ const confirmDelete = (note: NoteItem) => {
 
 const deleteNote = () => {
     if (noteToDelete.value) {
-        router.delete(route('notes.destroy', noteToDelete.value.id), {
+        router.delete(`/notes/${noteToDelete.value.id}`, {
             onSuccess: () => {
                 showDeleteConfirm.value = false;
                 noteToDelete.value = null;
@@ -73,12 +81,12 @@ const deleteNote = () => {
 };
 
 const applyFilters = () => {
-    form.get(route('notes.index'));
+    form.get('/notes');
 };
 
 const resetFilters = () => {
     form.reset();
-    router.get(route('notes.index'));
+    router.get('/notes');
 };
 
 const formatDate = (date: string) => {
@@ -127,7 +135,7 @@ const getLabelColor = (index: number) => {
                     Financial reminders and notes
                 </p>
             </div>
-            <Link :href="route('notes.create')">
+            <Link href="/notes/create">
                 <Button class="bg-indigo-600 text-white hover:bg-indigo-700">
                     <Plus class="mr-2 h-4 w-4" />
                     Add Note
@@ -227,16 +235,16 @@ const getLabelColor = (index: number) => {
         <!-- Export/Print Buttons -->
         <div class="flex flex-wrap gap-2">
             <a
-                :href="route('notes.export.csv')"
-                class="inline-flex items-center gap-2 rounded-lg bg-blue-500 px-4 py-2 text-white hover:bg-blue-600 transition"
+                href="/notes/export/csv"
+                class="inline-flex items-center gap-2 rounded-lg bg-blue-500 px-4 py-2 text-white transition hover:bg-blue-600"
             >
                 <Download class="h-4 w-4" />
                 Export CSV
             </a>
             <a
-                :href="route('notes.export.print')"
+                href="/notes/export/print"
                 target="_blank"
-                class="inline-flex items-center gap-2 rounded-lg bg-gray-500 px-4 py-2 text-white hover:bg-gray-600 transition"
+                class="inline-flex items-center gap-2 rounded-lg bg-gray-500 px-4 py-2 text-white transition hover:bg-gray-600"
             >
                 <Printer class="h-4 w-4" />
                 Print Report
@@ -261,7 +269,7 @@ const getLabelColor = (index: number) => {
             <p class="mb-6 text-gray-600 dark:text-gray-400">
                 Create your first note to get started
             </p>
-            <Link :href="route('notes.create')">
+            <Link href="/notes/create">
                 <Button class="bg-indigo-600 text-white hover:bg-indigo-700">
                     <Plus class="mr-2 h-4 w-4" />
                     Create Note
@@ -291,7 +299,7 @@ const getLabelColor = (index: number) => {
                         </p>
                     </div>
                     <div class="ml-2 flex items-center gap-1">
-                        <Link :href="route('notes.edit', note.id)">
+                        <Link :href="`/notes/${note.id}/edit`">
                             <Button
                                 variant="ghost"
                                 size="sm"
@@ -347,13 +355,13 @@ const getLabelColor = (index: number) => {
             <div class="flex gap-2">
                 <Link
                     v-if="notes.current_page > 1"
-                    :href="`${route('notes.index')}?page=${notes.current_page - 1}`"
+                    :href="`/notes?page=${notes.current_page - 1}`"
                 >
                     <Button variant="outline">Previous</Button>
                 </Link>
                 <Link
                     v-if="notes.current_page < notes.last_page"
-                    :href="`${route('notes.index')}?page=${notes.current_page + 1}`"
+                    :href="`/notes?page=${notes.current_page + 1}`"
                 >
                     <Button variant="outline">Next</Button>
                 </Link>

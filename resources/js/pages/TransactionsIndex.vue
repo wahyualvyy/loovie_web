@@ -1,7 +1,14 @@
 <script setup lang="ts">
 import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import { ref, computed } from 'vue';
-import { Edit2, Trash2, Plus, Search, Download, Printer } from 'lucide-vue-next';
+import {
+    Edit2,
+    Trash2,
+    Plus,
+    Search,
+    Download,
+    Printer,
+} from 'lucide-vue-next';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
@@ -97,7 +104,7 @@ const confirmDelete = (transaction: TransactionItem) => {
 const deleteTransaction = () => {
     if (transactionToDelete.value) {
         router.delete(
-            route('transactions.destroy', transactionToDelete.value.id),
+            `/transactions/${transactionToDelete.value.id}`,
             {
                 onSuccess: () => {
                     showDeleteConfirm.value = false;
@@ -109,12 +116,12 @@ const deleteTransaction = () => {
 };
 
 const applyFilters = () => {
-    form.get(route('transactions.index'));
+    form.get('/transactions');
 };
 
 const resetFilters = () => {
     form.reset();
-    router.get(route('transactions.index'));
+    router.get('/transactions');
 };
 
 const formatCurrency = (value: number) => {
@@ -161,7 +168,7 @@ const getCategoryName = (categoryId: number) => {
                     All your income and expenses
                 </p>
             </div>
-            <Link :href="route('transactions.create')">
+            <Link href="/transactions/create">
                 <Button class="bg-indigo-600 text-white hover:bg-indigo-700">
                     <Plus class="mr-2 h-4 w-4" />
                     Add Transaction
@@ -320,16 +327,16 @@ const getCategoryName = (categoryId: number) => {
         <!-- Export/Print Buttons -->
         <div class="flex flex-wrap gap-2">
             <a
-                :href="route('transactions.export.csv')"
-                class="inline-flex items-center gap-2 rounded-lg bg-blue-500 px-4 py-2 text-white hover:bg-blue-600 transition"
+                href="/transactions/export/csv"
+                class="inline-flex items-center gap-2 rounded-lg bg-blue-500 px-4 py-2 text-white transition hover:bg-blue-600"
             >
                 <Download class="h-4 w-4" />
                 Export CSV
             </a>
             <a
-                :href="route('transactions.export.print')"
+                href="/transactions/export/print"
                 target="_blank"
-                class="inline-flex items-center gap-2 rounded-lg bg-gray-500 px-4 py-2 text-white hover:bg-gray-600 transition"
+                class="inline-flex items-center gap-2 rounded-lg bg-gray-500 px-4 py-2 text-white transition hover:bg-gray-600"
             >
                 <Printer class="h-4 w-4" />
                 Print Report
@@ -415,16 +422,18 @@ const getCategoryName = (categoryId: number) => {
                             </td>
                             <td class="px-6 py-4 text-sm">
                                 <span
-                                    :style="{
-                                        backgroundColor:
-                                            transaction.category.color + '30',
-                                    }"
                                     class="rounded-full px-3 py-1 text-xs font-medium"
                                     :style="{
-                                        color: transaction.category.color,
+                                        backgroundColor: transaction.category
+                                            ?.color
+                                            ? transaction.category.color + '20'
+                                            : '#f3f4f6',
+                                        color:
+                                            transaction.category?.color ||
+                                            '#374151',
                                     }"
                                 >
-                                    {{ transaction.category.name }}
+                                    {{ transaction.category?.name || '-' }}
                                 </span>
                             </td>
                             <td
@@ -443,12 +452,7 @@ const getCategoryName = (categoryId: number) => {
                                     class="flex items-center justify-center space-x-2"
                                 >
                                     <Link
-                                        :href="
-                                            route(
-                                                'transactions.edit',
-                                                transaction.id,
-                                            )
-                                        "
+                                        :href="`/transactions/${transaction.id}/edit`"
                                         class="inline-flex"
                                     >
                                         <Button
@@ -500,9 +504,7 @@ const getCategoryName = (categoryId: number) => {
                         </div>
                         <div class="flex items-center space-x-2">
                             <Link
-                                :href="
-                                    route('transactions.edit', transaction.id)
-                                "
+                                :href="`/transactions/${transaction.id}/edit`"
                             >
                                 <Button
                                     variant="ghost"
@@ -576,13 +578,13 @@ const getCategoryName = (categoryId: number) => {
             <div class="flex gap-2">
                 <Link
                     v-if="transactions.current_page > 1"
-                    :href="`${route('transactions.index')}?page=${transactions.current_page - 1}`"
+                    :href="`/transactions?page=${transactions.current_page - 1}`"
                 >
                     <Button variant="outline">Previous</Button>
                 </Link>
                 <Link
                     v-if="transactions.current_page < transactions.last_page"
-                    :href="`${route('transactions.index')}?page=${transactions.current_page + 1}`"
+                    :href="`/transactions?page=${transactions.current_page + 1}`"
                 >
                     <Button variant="outline">Next</Button>
                 </Link>

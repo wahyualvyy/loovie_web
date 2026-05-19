@@ -15,16 +15,16 @@ class NoteExportController extends Controller
     public function exportCSV(Request $request): StreamedResponse
     {
         $user = Auth::user();
-        
+
         $filters = $request->only(['label', 'date_from', 'date_to', 'month']);
         $notes = $this->getFilteredNotes($user, $filters);
 
         $callback = function () use ($notes) {
             $file = fopen('php://output', 'w');
-            
+
             // Header row with BOM for Excel UTF-8 support
-            fprintf($file, chr(0xEF).chr(0xBB).chr(0xBF));
-            
+            fprintf($file, chr(0xEF) . chr(0xBB) . chr(0xBF));
+
             fputcsv($file, [
                 'Date',
                 'Title',
@@ -57,7 +57,7 @@ class NoteExportController extends Controller
     public function printReport(Request $request)
     {
         $user = Auth::user();
-        
+
         $filters = $request->only(['label', 'date_from', 'date_to', 'month']);
         $notes = $this->getFilteredNotes($user, $filters);
 

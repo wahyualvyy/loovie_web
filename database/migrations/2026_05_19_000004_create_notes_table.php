@@ -4,8 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
-{
+return new class extends Migration {
     public function up(): void
     {
         Schema::create('notes', function (Blueprint $table) {
@@ -16,7 +15,7 @@ return new class extends Migration
             $table->date('note_date');
             $table->string('label')->nullable(); // Kategori/label catatan
             $table->timestamps();
-            
+
             $table->index('user_id');
             $table->index('note_date');
         });

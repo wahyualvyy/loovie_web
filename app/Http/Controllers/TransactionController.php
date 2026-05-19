@@ -8,8 +8,8 @@ use App\Models\FinancialAccount;
 use App\Models\Category;
 use App\Models\Transaction;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Inertia\Inertia;
-use Illuminate\Inertia\Response;
+use Inertia\Inertia;
+use Inertia\Response;
 use Illuminate\Support\Facades\Redirect;
 use Illuminate\Support\Facades\Storage;
 
@@ -53,7 +53,7 @@ class TransactionController extends Controller
         if (request('month')) {
             $month = request('month'); // format: YYYY-MM
             $query->whereYear('transaction_date', substr($month, 0, 4))
-                  ->whereMonth('transaction_date', substr($month, 5, 2));
+                ->whereMonth('transaction_date', substr($month, 5, 2));
         }
 
         $transactions = $query->paginate(15);

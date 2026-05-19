@@ -125,7 +125,7 @@ const removeOldAttachment = () => {
 };
 
 const submit = () => {
-    form.post(route('transactions.update', props.transaction.id), {
+    form.put(`/transactions/${props.transaction.id}`, {
         onError: (errors) => {
             console.error('Validation errors:', errors);
         },
@@ -149,7 +149,7 @@ const formatCurrency = (value: number) => {
         <!-- Header -->
         <div class="mb-6">
             <Link
-                :href="route('transactions.index')"
+                href="/transactions"
                 class="mb-4 inline-flex items-center text-indigo-600 hover:text-indigo-700"
             >
                 <ArrowLeft class="mr-2 h-4 w-4" />
@@ -254,7 +254,10 @@ const formatCurrency = (value: number) => {
                             class="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-2 text-gray-900 focus:border-transparent focus:ring-2 focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
                         >
                             <option value="">Select a category...</option>
-                            <optgroup label="Income Categories">
+                            <optgroup
+                                v-if="form.type === 'income' && incomeCategories.length > 0"
+                                label="Income Categories"
+                            >
                                 <option
                                     v-for="category in incomeCategories"
                                     :key="category.id"
@@ -263,7 +266,34 @@ const formatCurrency = (value: number) => {
                                     {{ category.name }}
                                 </option>
                             </optgroup>
-                            <optgroup label="Expense Categories">
+                            <optgroup
+                                v-if="form.type === 'expense' && expenseCategories.length > 0"
+                                label="Expense Categories"
+                            >
+                                <option
+                                    v-for="category in expenseCategories"
+                                    :key="category.id"
+                                    :value="String(category.id)"
+                                >
+                                    {{ category.name }}
+                                </option>
+                            </optgroup>
+                            <optgroup
+                                v-if="!form.type && incomeCategories.length > 0"
+                                label="Income Categories"
+                            >
+                                <option
+                                    v-for="category in incomeCategories"
+                                    :key="category.id"
+                                    :value="String(category.id)"
+                                >
+                                    {{ category.name }}
+                                </option>
+                            </optgroup>
+                            <optgroup
+                                v-if="!form.type && expenseCategories.length > 0"
+                                label="Expense Categories"
+                            >
                                 <option
                                     v-for="category in expenseCategories"
                                     :key="category.id"
@@ -426,7 +456,7 @@ const formatCurrency = (value: number) => {
                         class="flex gap-3 border-t border-gray-200 pt-6 dark:border-gray-700"
                     >
                         <Link
-                            :href="route('transactions.index')"
+                            href="/transactions"
                             class="flex-1"
                         >
                             <Button variant="outline" class="w-full"

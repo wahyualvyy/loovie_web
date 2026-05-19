@@ -69,7 +69,7 @@ const confirmDelete = (category: Category) => {
 
 const deleteCategory = () => {
     if (categoryToDelete.value) {
-        router.delete(route('categories.destroy', categoryToDelete.value.id), {
+        router.delete(`/categories/${categoryToDelete.value.id}`, {
             onSuccess: () => {
                 showDeleteConfirm.value = false;
                 categoryToDelete.value = null;
@@ -107,7 +107,7 @@ const getTypeColor = (type: string) => {
                     Manage transaction categories
                 </p>
             </div>
-            <Link :href="route('categories.create')">
+            <Link href="/categories/create">
                 <Button class="bg-indigo-600 text-white hover:bg-indigo-700">
                     <Plus class="mr-2 h-4 w-4" />
                     Add Category
@@ -219,7 +219,7 @@ const getTypeColor = (type: string) => {
                         </div>
                     </div>
                     <div class="flex items-center space-x-1">
-                        <Link :href="route('categories.edit', category.id)">
+                        <Link :href="`/categories/${category.id}/edit`">
                             <Button
                                 variant="ghost"
                                 size="sm"

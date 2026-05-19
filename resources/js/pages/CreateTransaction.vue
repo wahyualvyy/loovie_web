@@ -101,7 +101,7 @@ const removeAttachment = () => {
 };
 
 const submit = () => {
-    form.post(route('transactions.store'), {
+    form.post('/transactions', {
         onError: (errors) => {
             console.error('Validation errors:', errors);
         },
@@ -125,7 +125,7 @@ const formatCurrency = (value: number) => {
         <!-- Header -->
         <div class="mb-6">
             <Link
-                :href="route('transactions.index')"
+                href="/transactions"
                 class="mb-4 inline-flex items-center text-indigo-600 hover:text-indigo-700"
             >
                 <ArrowLeft class="mr-2 h-4 w-4" />
@@ -224,14 +224,23 @@ const formatCurrency = (value: number) => {
                         >
                             Category <span class="text-red-500">*</span>
                         </label>
+                        <div v-if="categories.length === 0" class="rounded-lg border border-yellow-200 bg-yellow-50 p-4 dark:border-yellow-800 dark:bg-yellow-900/20">
+                            <p class="text-sm text-yellow-700 dark:text-yellow-400">
+                                No categories created yet. 
+                                <Link href="/categories/create" class="font-semibold underline hover:no-underline">
+                                    Create a category first
+                                </Link>
+                            </p>
+                        </div>
                         <select
+                            v-else
                             v-model="form.category_id"
                             @change="handleCategoryChange"
                             class="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-2 text-gray-900 focus:border-transparent focus:ring-2 focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
                         >
                             <option value="">Select a category...</option>
                             <optgroup
-                                v-if="form.type === 'income' || !form.type"
+                                v-if="form.type === 'income' && incomeCategories.length > 0"
                                 label="Income Categories"
                             >
                                 <option
@@ -243,7 +252,31 @@ const formatCurrency = (value: number) => {
                                 </option>
                             </optgroup>
                             <optgroup
-                                v-if="form.type === 'expense' || !form.type"
+                                v-if="form.type === 'expense' && expenseCategories.length > 0"
+                                label="Expense Categories"
+                            >
+                                <option
+                                    v-for="category in expenseCategories"
+                                    :key="category.id"
+                                    :value="String(category.id)"
+                                >
+                                    {{ category.name }}
+                                </option>
+                            </optgroup>
+                            <optgroup
+                                v-if="!form.type && incomeCategories.length > 0"
+                                label="Income Categories"
+                            >
+                                <option
+                                    v-for="category in incomeCategories"
+                                    :key="category.id"
+                                    :value="String(category.id)"
+                                >
+                                    {{ category.name }}
+                                </option>
+                            </optgroup>
+                            <optgroup
+                                v-if="!form.type && expenseCategories.length > 0"
                                 label="Expense Categories"
                             >
                                 <option
@@ -367,7 +400,7 @@ const formatCurrency = (value: number) => {
                         class="flex gap-3 border-t border-gray-200 pt-6 dark:border-gray-700"
                     >
                         <Link
-                            :href="route('transactions.index')"
+                            href="/transactions"
                             class="flex-1"
                         >
                             <Button variant="outline" class="w-full"

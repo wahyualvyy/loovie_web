@@ -65,7 +65,7 @@ const selectColor = (color: string) => {
 
 const submit = () => {
     isSubmitting.value = true;
-    form.put(route('categories.update', props.category.id), {
+    form.put(`/categories/${props.category.id}`, {
         onFinish: () => {
             isSubmitting.value = false;
         },
@@ -80,7 +80,7 @@ const submit = () => {
         <!-- Header -->
         <div class="mb-6 flex items-center space-x-3">
             <Link
-                :href="route('categories.index')"
+                href="/categories"
                 class="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
             >
                 <ArrowLeft class="h-6 w-6" />
@@ -281,7 +281,7 @@ const submit = () => {
             <div
                 class="flex items-center justify-end space-x-3 border-t border-gray-200 pt-4 dark:border-gray-700"
             >
-                <Link :href="route('categories.index')">
+                <Link href="/categories">
                     <Button variant="outline">Cancel</Button>
                 </Link>
                 <Button

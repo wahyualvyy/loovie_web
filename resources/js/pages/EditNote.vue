@@ -51,7 +51,7 @@ const charCount = computed(() => {
 });
 
 const submit = () => {
-    form.post(route('notes.update', props.note.id), {
+    form.put(`/notes/${props.note.id}`, {
         onError: (errors) => {
             console.error('Validation errors:', errors);
         },
@@ -66,7 +66,7 @@ const submit = () => {
         <!-- Header -->
         <div class="mb-6">
             <Link
-                :href="route('notes.index')"
+                href="/notes"
                 class="mb-4 inline-flex items-center text-indigo-600 hover:text-indigo-700"
             >
                 <ArrowLeft class="mr-2 h-4 w-4" />
@@ -179,7 +179,7 @@ const submit = () => {
                     <div
                         class="flex gap-3 border-t border-gray-200 pt-6 dark:border-gray-700"
                     >
-                        <Link :href="route('notes.index')" class="flex-1">
+                        <Link href="/notes" class="flex-1">
                             <Button variant="outline" class="w-full"
                                 >Cancel</Button
                             >

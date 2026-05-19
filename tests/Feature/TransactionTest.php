@@ -25,11 +25,11 @@ class TransactionTest extends TestCase
         $this->account = FinancialAccount::factory()
             ->for($this->user)
             ->create(['current_balance' => 0]);
-        
+
         $this->incomeCategory = Category::factory()
             ->for($this->user)
             ->create(['type' => 'income']);
-        
+
         $this->expenseCategory = Category::factory()
             ->for($this->user)
             ->create(['type' => 'expense']);

@@ -7,8 +7,8 @@ use App\Http\Requests\UpdateFinancialAccountRequest;
 use App\Models\FinancialAccount;
 use App\Models\Transaction;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Inertia\Inertia;
-use Illuminate\Inertia\Response;
+use Inertia\Inertia;
+use Inertia\Response;
 use Illuminate\Support\Facades\Redirect;
 
 class FinancialAccountController extends Controller
