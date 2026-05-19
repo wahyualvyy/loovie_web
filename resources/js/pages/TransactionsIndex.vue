@@ -87,13 +87,13 @@ const form = useForm({
 const totalIncome = computed(() => {
     return props.transactions.data
         .filter((t) => t.type === 'income')
-        .reduce((sum, t) => sum + t.amount, 0);
+        .reduce((sum, t) => sum + Number(t.amount), 0);
 });
 
 const totalExpense = computed(() => {
     return props.transactions.data
         .filter((t) => t.type === 'expense')
-        .reduce((sum, t) => sum + t.amount, 0);
+        .reduce((sum, t) => sum + Number(t.amount), 0);
 });
 
 const confirmDelete = (transaction: TransactionItem) => {
@@ -627,3 +627,4 @@ const getCategoryName = (categoryId: number) => {
         </div>
     </div>
 </template>
+

@@ -41,6 +41,7 @@ interface Props {
         current_page: number;
         last_page: number;
     };
+    totalBalance: number;
 }
 
 const props = defineProps<Props>();
@@ -83,13 +84,6 @@ const filteredAccounts = computed(() => {
     );
 });
 
-const totalBalance = computed(() => {
-    return props.accounts.data.reduce(
-        (sum, acc) => sum + acc.current_balance,
-        0,
-    );
-});
-
 const confirmDelete = (account: Account) => {
     accountToDelete.value = account;
     showDeleteConfirm.value = true;
@@ -97,15 +91,12 @@ const confirmDelete = (account: Account) => {
 
 const deleteAccount = () => {
     if (accountToDelete.value) {
-        router.delete(
-            `/financial-accounts/${accountToDelete.value.id}`,
-            {
-                onSuccess: () => {
-                    showDeleteConfirm.value = false;
-                    accountToDelete.value = null;
-                },
+        router.delete(`/financial-accounts/${accountToDelete.value.id}`, {
+            onSuccess: () => {
+                showDeleteConfirm.value = false;
+                accountToDelete.value = null;
             },
-        );
+        });
     }
 };
 

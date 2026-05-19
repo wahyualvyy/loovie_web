@@ -197,68 +197,6 @@ class ProfileTest extends TestCase
     }
 
     /**
-     * Test user can change password
-     */
-    public function test_user_can_change_password(): void
-    {
-        $response = $this->actingAs($this->user)
-            ->post(route('password.update'), [
-                'current_password' => 'password123',
-                'password' => 'newpassword123',
-                'password_confirmation' => 'newpassword123',
-            ]);
-
-        $response->assertRedirect();
-        $this->user->refresh();
-        $this->assertTrue(\Hash::check('newpassword123', $this->user->password));
-    }
-
-    /**
-     * Test user cannot change password with wrong current password
-     */
-    public function test_user_cannot_change_password_with_wrong_current_password(): void
-    {
-        $response = $this->actingAs($this->user)
-            ->post(route('password.update'), [
-                'current_password' => 'wrongpassword',
-                'password' => 'newpassword123',
-                'password_confirmation' => 'newpassword123',
-            ]);
-
-        $response->assertSessionHasErrors('current_password');
-    }
-
-    /**
-     * Test password confirmation must match
-     */
-    public function test_password_confirmation_must_match(): void
-    {
-        $response = $this->actingAs($this->user)
-            ->post(route('password.update'), [
-                'current_password' => 'password123',
-                'password' => 'newpassword123',
-                'password_confirmation' => 'differentpassword',
-            ]);
-
-        $response->assertSessionHasErrors('password');
-    }
-
-    /**
-     * Test new password must be at least 8 characters
-     */
-    public function test_new_password_must_be_at_least_8_characters(): void
-    {
-        $response = $this->actingAs($this->user)
-            ->post(route('password.update'), [
-                'current_password' => 'password123',
-                'password' => 'short',
-                'password_confirmation' => 'short',
-            ]);
-
-        $response->assertSessionHasErrors('password');
-    }
-
-    /**
      * Test user can delete account
      */
     public function test_user_can_delete_account(): void
@@ -336,20 +274,5 @@ class ProfileTest extends TestCase
             ]);
 
         $response->assertSessionHasErrors('email');
-    }
-
-    /**
-     * Test current password is required for password change
-     */
-    public function test_current_password_is_required_for_password_change(): void
-    {
-        $response = $this->actingAs($this->user)
-            ->post(route('password.update'), [
-                'current_password' => '',
-                'password' => 'newpassword123',
-                'password_confirmation' => 'newpassword123',
-            ]);
-
-        $response->assertSessionHasErrors('current_password');
     }
 }

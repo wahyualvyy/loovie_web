@@ -1,11 +1,16 @@
 <script setup lang="ts">
-import { computed } from 'vue';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { computed, ref, watch } from 'vue';
 import { useInitials } from '@/composables/useInitials';
 import type { User } from '@/types';
 
+type UserWithPhoto = User & {
+    avatar?: string | null;
+    photo_url?: string | null;
+    photo_path?: string | null;
+};
+
 type Props = {
-    user: User;
+    user: UserWithPhoto;
     showEmail?: boolean;
 };
 
@@ -15,24 +20,54 @@ const props = withDefaults(defineProps<Props>(), {
 
 const { getInitials } = useInitials();
 
-// Compute whether we should show the avatar image
-const showAvatar = computed(
-    () => props.user.avatar && props.user.avatar !== '',
+const imageError = ref(false);
+
+const avatarUrl = computed(() => {
+    return props.user?.photo_url || props.user?.avatar || null;
+});
+
+const shouldShowImage = computed(() => {
+    return !!avatarUrl.value && !imageError.value;
+});
+
+watch(
+    () => avatarUrl.value,
+    () => {
+        imageError.value = false;
+    },
 );
 </script>
 
 <template>
-    <Avatar class="h-8 w-8 overflow-hidden rounded-lg">
-        <AvatarImage v-if="showAvatar" :src="user.avatar!" :alt="user.name" />
-        <AvatarFallback class="rounded-lg text-black dark:text-white">
+    <div
+        class="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-muted"
+    >
+        <img
+            v-if="shouldShowImage"
+            :src="avatarUrl"
+            :alt="user.name"
+            class="h-full w-full object-cover"
+            @error="imageError = true"
+        />
+
+        <span
+            v-else
+            class="text-sm font-semibold text-foreground"
+        >
             {{ getInitials(user.name) }}
-        </AvatarFallback>
-    </Avatar>
+        </span>
+    </div>
 
     <div class="grid flex-1 text-left text-sm leading-tight">
-        <span class="truncate font-medium">{{ user.name }}</span>
-        <span v-if="showEmail" class="truncate text-xs text-muted-foreground">{{
-            user.email
-        }}</span>
+        <span class="truncate font-medium">
+            {{ user.name }}
+        </span>
+
+        <span
+            v-if="showEmail"
+            class="truncate text-xs text-muted-foreground"
+        >
+            {{ user.email }}
+        </span>
     </div>
 </template>

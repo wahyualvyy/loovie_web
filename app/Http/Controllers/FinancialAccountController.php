@@ -23,8 +23,11 @@ class FinancialAccountController extends Controller
             ->orderBy('created_at', 'desc')
             ->paginate(10);
 
+        $totalBalance = auth()->user()->financialAccounts()->sum('current_balance');
+
         return Inertia::render('FinancialAccountsIndex', [
             'accounts' => $accounts,
+            'totalBalance' => (float) $totalBalance,
         ]);
     }
 
@@ -123,5 +126,52 @@ class FinancialAccountController extends Controller
         if ($account->user_id !== auth()->id()) {
             abort(403, 'Unauthorized');
         }
+    }
+
+    /**
+     * Export all financial accounts to CSV.
+     */
+    public function exportCsv()
+    {
+        $accounts = auth()->user()->financialAccounts()->orderBy('created_at', 'desc')->get();
+
+        $filename = "financial_accounts_" . date('Y-m-d') . ".csv";
+        $headers = [
+            "Content-type" => "text/csv",
+            "Content-Disposition" => "attachment; filename=$filename",
+            "Pragma" => "no-cache",
+            "Cache-Control" => "must-revalidate, post-check=0, pre-check=0",
+            "Expires" => "0"
+        ];
+
+        $callback = function () use ($accounts) {
+            $file = fopen('php://output', 'w');
+            fputcsv($file, ['Account Name', 'Type', 'Initial Balance', 'Current Balance', 'Status', 'Description']);
+
+            foreach ($accounts as $account) {
+                fputcsv($file, [
+                    $account->name,
+                    $account->type,
+                    $account->initial_balance,
+                    $account->current_balance,
+                    $account->is_active ? 'Active' : 'Inactive',
+                    $account->description
+                ]);
+            }
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, $headers);
+    }
+
+    /**
+     * Print all financial accounts.
+     */
+    public function exportPrint()
+    {
+        $accounts = auth()->user()->financialAccounts()->orderBy('created_at', 'desc')->get();
+        $totalBalance = $accounts->sum('current_balance');
+
+        return view('reports.financial-accounts', compact('accounts', 'totalBalance'));
     }
 }

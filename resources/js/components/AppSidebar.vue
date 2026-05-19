@@ -5,7 +5,6 @@ import {
     TrendingUp,
     FileText,
     CreditCard,
-    Settings,
 } from 'lucide-vue-next';
 import AppLogo from '@/components/AppLogo.vue';
 import NavFooter from '@/components/NavFooter.vue';
@@ -45,13 +44,7 @@ const mainNavItems: NavItem[] = [
     },
 ];
 
-const footerNavItems: NavItem[] = [
-    {
-        title: 'Settings',
-        href: '/settings/profile',
-        icon: Settings,
-    },
-];
+const footerNavItems: NavItem[] = [];
 </script>
 
 <template>

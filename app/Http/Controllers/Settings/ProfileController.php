@@ -30,7 +30,7 @@ class ProfileController extends Controller
                 'name' => $user->name,
                 'email' => $user->email,
                 'photo_path' => $user->photo_path,
-                'photo_url' => $user->photo_path ? Storage::url($user->photo_path) : null,
+                'photo_url' => $user->photo_path ? Storage::disk('public')->url($user->photo_path) : null,
             ],
         ]);
     }
@@ -46,8 +46,8 @@ class ProfileController extends Controller
         // Handle photo upload
         if ($request->hasFile('photo')) {
             // Delete old photo if exists
-            if ($user->photo_path && Storage::exists($user->photo_path)) {
-                Storage::delete($user->photo_path);
+            if ($user->photo_path && Storage::disk('public')->exists($user->photo_path)) {
+                Storage::disk('public')->delete($user->photo_path);
             }
 
             // Store new photo
@@ -75,8 +75,8 @@ class ProfileController extends Controller
         $user = $request->user();
 
         // Delete user's photo if exists
-        if ($user->photo_path && Storage::exists($user->photo_path)) {
-            Storage::delete($user->photo_path);
+        if ($user->photo_path && Storage::disk('public')->exists($user->photo_path)) {
+            Storage::disk('public')->delete($user->photo_path);
         }
 
         Auth::logout();
