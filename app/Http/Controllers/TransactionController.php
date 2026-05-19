@@ -4,14 +4,12 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreTransactionRequest;
 use App\Http\Requests\UpdateTransactionRequest;
-use App\Models\FinancialAccount;
-use App\Models\Category;
 use App\Models\Transaction;
 use Illuminate\Http\RedirectResponse;
-use Inertia\Inertia;
-use Inertia\Response;
 use Illuminate\Support\Facades\Redirect;
 use Illuminate\Support\Facades\Storage;
+use Inertia\Inertia;
+use Inertia\Response;
 
 class TransactionController extends Controller
 {
@@ -20,14 +18,25 @@ class TransactionController extends Controller
      */
     public function index(): Response
     {
-        $query = auth()->user()->transactions()
+        $user = auth()->user();
+
+        $query = $user->transactions()
             ->with(['account', 'category'])
             ->orderBy('transaction_date', 'desc')
             ->orderBy('created_at', 'desc');
 
-        // Apply filters from request
         if (request('search')) {
-            $query->where('description', 'like', '%' . request('search') . '%');
+            $search = request('search');
+
+            $query->where(function ($q) use ($search) {
+                $q->where('description', 'like', '%' . $search . '%')
+                    ->orWhereHas('account', function ($accountQuery) use ($search) {
+                        $accountQuery->where('name', 'like', '%' . $search . '%');
+                    })
+                    ->orWhereHas('category', function ($categoryQuery) use ($search) {
+                        $categoryQuery->where('name', 'like', '%' . $search . '%');
+                    });
+            });
         }
 
         if (request('account_id')) {
@@ -43,24 +52,33 @@ class TransactionController extends Controller
         }
 
         if (request('date_from')) {
-            $query->where('transaction_date', '>=', request('date_from'));
+            $query->whereDate('transaction_date', '>=', request('date_from'));
         }
 
         if (request('date_to')) {
-            $query->where('transaction_date', '<=', request('date_to'));
+            $query->whereDate('transaction_date', '<=', request('date_to'));
         }
 
         if (request('month')) {
-            $month = request('month'); // format: YYYY-MM
-            $query->whereYear('transaction_date', substr($month, 0, 4))
-                ->whereMonth('transaction_date', substr($month, 5, 2));
+            $month = request('month');
+
+            if (strlen($month) === 7) {
+                $query->whereYear('transaction_date', substr($month, 0, 4))
+                    ->whereMonth('transaction_date', substr($month, 5, 2));
+            }
         }
 
-        $transactions = $query->paginate(15);
+        $transactions = $query
+            ->paginate(15)
+            ->withQueryString();
 
-        // Get data for filter dropdowns
-        $accounts = auth()->user()->financialAccounts()->orderBy('name')->get();
-        $categories = auth()->user()->categories()->orderBy('name')->get();
+        $accounts = $user->financialAccounts()
+            ->orderBy('name')
+            ->get();
+
+        $categories = $user->categories()
+            ->orderBy('name')
+            ->get();
 
         return Inertia::render('TransactionsIndex', [
             'transactions' => $transactions,
@@ -83,8 +101,17 @@ class TransactionController extends Controller
      */
     public function create(): Response
     {
-        $accounts = auth()->user()->financialAccounts()->where('is_active', true)->orderBy('name')->get();
-        $categories = auth()->user()->categories()->orderBy('type')->orderBy('name')->get();
+        $user = auth()->user();
+
+        $accounts = $user->financialAccounts()
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get();
+
+        $categories = $user->categories()
+            ->orderBy('type')
+            ->orderBy('name')
+            ->get();
 
         return Inertia::render('CreateTransaction', [
             'accounts' => $accounts,
@@ -97,21 +124,28 @@ class TransactionController extends Controller
      */
     public function store(StoreTransactionRequest $request): RedirectResponse
     {
+        $user = auth()->user();
         $validated = $request->validated();
-        $validated['user_id'] = auth()->id();
 
-        // Handle attachment upload
+        $account = $user->financialAccounts()
+            ->where('id', $validated['financial_account_id'])
+            ->firstOrFail();
+
+        $user->categories()
+            ->where('id', $validated['category_id'])
+            ->firstOrFail();
+
+        $validated['user_id'] = $user->id;
+
         if ($request->hasFile('attachment')) {
-            $file = $request->file('attachment');
-            $path = $file->store('transactions', 'public');
-            $validated['attachment'] = $path;
+            $validated['attachment'] = $request
+                ->file('attachment')
+                ->store('transactions', 'public');
         }
 
-        // Create transaction
-        $transaction = Transaction::create($validated);
+        Transaction::create($validated);
 
-        // Update account balance
-        $transaction->account->calculateBalance();
+        $account->calculateBalance();
 
         return Redirect::route('transactions.index')
             ->with('success', 'Transaksi berhasil ditambahkan');
@@ -124,11 +158,20 @@ class TransactionController extends Controller
     {
         $this->authorizeUser($transaction);
 
-        $accounts = auth()->user()->financialAccounts()->where('is_active', true)->orderBy('name')->get();
-        $categories = auth()->user()->categories()->orderBy('type')->orderBy('name')->get();
+        $user = auth()->user();
+
+        $accounts = $user->financialAccounts()
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get();
+
+        $categories = $user->categories()
+            ->orderBy('type')
+            ->orderBy('name')
+            ->get();
 
         return Inertia::render('EditTransaction', [
-            'transaction' => $transaction,
+            'transaction' => $transaction->load(['account', 'category']),
             'accounts' => $accounts,
             'categories' => $categories,
         ]);
@@ -141,32 +184,41 @@ class TransactionController extends Controller
     {
         $this->authorizeUser($transaction);
 
+        $user = auth()->user();
         $validated = $request->validated();
 
-        // Handle attachment upload
+        $oldAccount = $user->financialAccounts()
+            ->where('id', $transaction->financial_account_id)
+            ->firstOrFail();
+
+        $newAccount = $user->financialAccounts()
+            ->where('id', $validated['financial_account_id'])
+            ->firstOrFail();
+
+        $user->categories()
+            ->where('id', $validated['category_id'])
+            ->firstOrFail();
+
         if ($request->hasFile('attachment')) {
-            // Delete old attachment if exists
             if ($transaction->attachment) {
                 Storage::disk('public')->delete($transaction->attachment);
             }
 
-            $file = $request->file('attachment');
-            $path = $file->store('transactions', 'public');
-            $validated['attachment'] = $path;
+            $validated['attachment'] = $request
+                ->file('attachment')
+                ->store('transactions', 'public');
         }
 
-        // If account changed, recalculate both accounts
         $oldAccountId = $transaction->financial_account_id;
         $newAccountId = $validated['financial_account_id'];
 
         $transaction->update($validated);
 
-        // Recalculate balances for affected accounts
-        if ($oldAccountId !== $newAccountId) {
-            FinancialAccount::find($oldAccountId)->calculateBalance();
-            FinancialAccount::find($newAccountId)->calculateBalance();
+        if ((int) $oldAccountId !== (int) $newAccountId) {
+            $oldAccount->calculateBalance();
+            $newAccount->calculateBalance();
         } else {
-            $transaction->account->calculateBalance();
+            $newAccount->calculateBalance();
         }
 
         return Redirect::route('transactions.index')
@@ -180,17 +232,18 @@ class TransactionController extends Controller
     {
         $this->authorizeUser($transaction);
 
-        $accountId = $transaction->financial_account_id;
+        $account = auth()->user()
+            ->financialAccounts()
+            ->where('id', $transaction->financial_account_id)
+            ->firstOrFail();
 
-        // Delete attachment if exists
         if ($transaction->attachment) {
             Storage::disk('public')->delete($transaction->attachment);
         }
 
         $transaction->delete();
 
-        // Recalculate balance
-        FinancialAccount::find($accountId)->calculateBalance();
+        $account->calculateBalance();
 
         return Redirect::route('transactions.index')
             ->with('success', 'Transaksi berhasil dihapus');
@@ -201,7 +254,7 @@ class TransactionController extends Controller
      */
     private function authorizeUser(Transaction $transaction): void
     {
-        if ($transaction->user_id !== auth()->id()) {
+        if ((int) $transaction->user_id !== (int) auth()->id()) {
             abort(403, 'Unauthorized');
         }
     }

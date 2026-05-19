@@ -5,35 +5,43 @@ namespace App\Http\Controllers;
 use App\Models\Note;
 use App\Http\Requests\StoreNoteRequest;
 use App\Http\Requests\UpdateNoteRequest;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 
 class NoteController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $user = Auth::user();
+        $user = $request->user();
 
         $notes = $user->notes()
-            ->when(request('search'), function ($query) {
-                $search = request('search');
-                return $query->where('title', 'like', "%{$search}%")
-                    ->orWhere('content', 'like', "%{$search}%");
+            ->when($request->filled('search'), function ($query) use ($request) {
+                $search = $request->search;
+
+                $query->where(function ($q) use ($search) {
+                    $q->where('title', 'like', "%{$search}%")
+                        ->orWhere('content', 'like', "%{$search}%");
+                });
             })
-            ->when(request('label'), function ($query) {
-                return $query->where('label', request('label'));
+            ->when($request->filled('label'), function ($query) use ($request) {
+                $query->where('label', $request->label);
             })
-            ->when(request('date_from'), function ($query) {
-                return $query->whereDate('note_date', '>=', request('date_from'));
+            ->when($request->filled('date_from'), function ($query) use ($request) {
+                $query->whereDate('note_date', '>=', $request->date_from);
             })
-            ->when(request('date_to'), function ($query) {
-                return $query->whereDate('note_date', '<=', request('date_to'));
+            ->when($request->filled('date_to'), function ($query) use ($request) {
+                $query->whereDate('note_date', '<=', $request->date_to);
             })
-            ->when(request('month'), function ($query) {
-                $month = request('month');
-                [$year, $monthNum] = explode('-', $month);
-                return $query->whereYear('note_date', $year)
-                    ->whereMonth('note_date', $monthNum);
+            ->when($request->filled('month'), function ($query) use ($request) {
+                $month = $request->month;
+
+                if (strlen($month) === 7) {
+                    [$year, $monthNum] = explode('-', $month);
+
+                    $query->whereYear('note_date', $year)
+                        ->whereMonth('note_date', $monthNum);
+                }
             })
             ->orderBy('note_date', 'desc')
             ->paginate(15)
@@ -43,12 +51,20 @@ class NoteController extends Controller
             ->select('label')
             ->distinct()
             ->whereNotNull('label')
+            ->where('label', '!=', '')
+            ->orderBy('label')
             ->pluck('label');
 
         return Inertia::render('NotesIndex', [
             'notes' => $notes,
             'labels' => $labels,
-            'filters' => request()->only(['search', 'label', 'date_from', 'date_to', 'month']),
+            'filters' => $request->only([
+                'search',
+                'label',
+                'date_from',
+                'date_to',
+                'month',
+            ]),
         ]);
     }
 
@@ -60,11 +76,11 @@ class NoteController extends Controller
     public function store(StoreNoteRequest $request)
     {
         $validated = $request->validated();
-        $validated['user_id'] = Auth::id();
 
-        Note::create($validated);
+        $request->user()->notes()->create($validated);
 
-        return redirect()->route('notes.index')
+        return redirect()
+            ->route('notes.index')
             ->with('success', 'Note created successfully!');
     }
 
@@ -82,9 +98,11 @@ class NoteController extends Controller
         $this->authorizeUser($note);
 
         $validated = $request->validated();
+
         $note->update($validated);
 
-        return redirect()->route('notes.index')
+        return redirect()
+            ->route('notes.index')
             ->with('success', 'Note updated successfully!');
     }
 
@@ -94,13 +112,14 @@ class NoteController extends Controller
 
         $note->delete();
 
-        return redirect()->route('notes.index')
+        return redirect()
+            ->route('notes.index')
             ->with('success', 'Note deleted successfully!');
     }
 
-    private function authorizeUser(Note $note)
+    private function authorizeUser(Note $note): void
     {
-        if ($note->user_id !== Auth::id()) {
+        if ((int) $note->user_id !== (int) Auth::id()) {
             abort(403, 'Unauthorized action.');
         }
     }

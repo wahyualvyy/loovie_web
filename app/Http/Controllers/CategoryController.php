@@ -6,22 +6,24 @@ use App\Http\Requests\StoreCategoryRequest;
 use App\Http\Requests\UpdateCategoryRequest;
 use App\Models\Category;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Redirect;
 use Inertia\Inertia;
 use Inertia\Response;
-use Illuminate\Support\Facades\Redirect;
 
 class CategoryController extends Controller
 {
     /**
      * Display a listing of categories.
      */
-    public function index(): Response
+    public function index(Request $request): Response
     {
-        $categories = auth()->user()
+        $categories = $request->user()
             ->categories()
             ->orderBy('type')
             ->orderBy('name')
-            ->paginate(15);
+            ->paginate(15)
+            ->withQueryString();
 
         return Inertia::render('CategoriesIndex', [
             'categories' => $categories,
@@ -42,9 +44,10 @@ class CategoryController extends Controller
     public function store(StoreCategoryRequest $request): RedirectResponse
     {
         $validated = $request->validated();
-        $validated['user_id'] = auth()->id();
 
-        Category::create($validated);
+        $request->user()
+            ->categories()
+            ->create($validated);
 
         return Redirect::route('categories.index')
             ->with('success', 'Kategori berhasil ditambahkan');
@@ -84,7 +87,6 @@ class CategoryController extends Controller
     {
         $this->authorizeUser($category);
 
-        // Check if category has transactions
         if ($category->transactions()->exists()) {
             return Redirect::route('categories.index')
                 ->with('error', 'Tidak dapat menghapus kategori yang memiliki transaksi. Hapus transaksi terlebih dahulu.');
@@ -101,7 +103,7 @@ class CategoryController extends Controller
      */
     private function authorizeUser(Category $category): void
     {
-        if ($category->user_id !== auth()->id()) {
+        if ((int) $category->user_id !== (int) auth()->id()) {
             abort(403, 'Unauthorized');
         }
     }
