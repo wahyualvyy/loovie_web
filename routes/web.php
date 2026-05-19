@@ -8,6 +8,7 @@ use App\Http\Controllers\NoteController;
 use App\Http\Controllers\TransactionExportController;
 use App\Http\Controllers\NoteExportController;
 use App\Http\Controllers\AccountExportController;
+use App\Http\Controllers\UserManagementController;
 use Illuminate\Support\Facades\Route;
 
 Route::inertia('/', 'Welcome')->name('home');
@@ -38,6 +39,19 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Export routes for Accounts
     Route::get('financial-accounts/export/csv', [AccountExportController::class, 'exportCSV'])->name('accounts.export.csv');
     Route::get('financial-accounts/export/print', [AccountExportController::class, 'printReport'])->name('accounts.export.print');
+
+    // User Management routes (Admin only)
+    Route::get('/data-master/users', [UserManagementController::class, 'index'])
+        ->name('users.index');
+
+    Route::post('/data-master/users', [UserManagementController::class, 'store'])
+        ->name('users.store');
+
+    Route::put('/data-master/users/{user}', [UserManagementController::class, 'update'])
+        ->name('users.update');
+
+    Route::delete('/data-master/users/{user}', [UserManagementController::class, 'destroy'])
+        ->name('users.destroy');
 });
 
 require __DIR__ . '/settings.php';

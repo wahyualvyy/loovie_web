@@ -1,11 +1,7 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
-import {
-    LayoutGrid,
-    TrendingUp,
-    FileText,
-    CreditCard,
-} from 'lucide-vue-next';
+import { LayoutGrid, TrendingUp, FileText, CreditCard } from 'lucide-vue-next';
+import { Database } from 'lucide-vue-next';
 import AppLogo from '@/components/AppLogo.vue';
 import NavFooter from '@/components/NavFooter.vue';
 import NavMain from '@/components/NavMain.vue';
@@ -41,6 +37,11 @@ const mainNavItems: NavItem[] = [
         title: 'Financial Accounts',
         href: '/financial-accounts',
         icon: CreditCard,
+    },
+    {
+        title: 'Data Master',
+        href: '/data-master/users',
+        icon: Database,
     },
 ];
 

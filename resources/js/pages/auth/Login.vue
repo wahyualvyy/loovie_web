@@ -141,13 +141,6 @@ const submit = () => {
                             >
                                 Password
                             </Label>
-                            <TextLink
-                                v-if="canResetPassword"
-                                :href="request()"
-                                class="text-sm text-indigo-600 transition-colors hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300"
-                            >
-                                Forgot?
-                            </TextLink>
                         </div>
                         <div class="relative">
                             <Input
@@ -256,26 +249,7 @@ const submit = () => {
                                 class="w-full border-t border-gray-300 dark:border-gray-700"
                             ></div>
                         </div>
-                        <div class="relative flex justify-center text-sm">
-                            <span
-                                class="bg-white px-2 text-gray-500 dark:bg-gray-900 dark:text-gray-400"
-                                >or</span
-                            >
-                        </div>
                     </div>
-
-                    <!-- Sign Up Link -->
-                    <p
-                        class="text-center text-sm text-gray-600 dark:text-gray-400"
-                    >
-                        Don't have an account?
-                        <TextLink
-                            href="/register"
-                            class="font-semibold text-indigo-600 transition-colors hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300"
-                        >
-                            Create one
-                        </TextLink>
-                    </p>
                 </form>
             </div>
 
