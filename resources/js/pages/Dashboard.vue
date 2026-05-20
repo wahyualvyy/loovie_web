@@ -13,8 +13,13 @@ import {
     NotebookText,
     PiggyBank,
     AlertTriangle,
+    Plus,
+    CircleDollarSign,
+    BarChart3,
 } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
+
+import EmptyState from '@/components/EmptyState.vue';
 
 import {
     Chart as ChartJS,
@@ -149,6 +154,20 @@ const safeBudgetSummary = computed<BudgetSummary>(() => {
     );
 });
 
+const hasChartData = computed(() => {
+    const incomeTotal = props.chartData?.income?.reduce(
+        (total, value) => total + Number(value || 0),
+        0,
+    );
+
+    const expenseTotal = props.chartData?.expense?.reduce(
+        (total, value) => total + Number(value || 0),
+        0,
+    );
+
+    return Number(incomeTotal || 0) > 0 || Number(expenseTotal || 0) > 0;
+});
+
 const combinedChartData = computed(() => {
     return {
         labels: props.chartData?.months ?? [],
@@ -246,9 +265,17 @@ const formatCurrency = (value: number | string | null | undefined) => {
 };
 
 const formatCompactCurrency = (value: number) => {
-    if (value >= 1_000_000_000) return `Rp${Math.round(value / 1_000_000_000)}M`;
-    if (value >= 1_000_000) return `Rp${Math.round(value / 1_000_000)}Jt`;
-    if (value >= 1_000) return `Rp${Math.round(value / 1_000)}Rb`;
+    if (value >= 1_000_000_000) {
+        return `Rp${Math.round(value / 1_000_000_000)}M`;
+    }
+
+    if (value >= 1_000_000) {
+        return `Rp${Math.round(value / 1_000_000)}Jt`;
+    }
+
+    if (value >= 1_000) {
+        return `Rp${Math.round(value / 1_000)}Rb`;
+    }
 
     return `Rp${value}`;
 };
@@ -279,11 +306,32 @@ const getTransactionColor = (transaction: Transaction) => {
     return transaction.category_color || '#6366f1';
 };
 
+const getAccountTypeLabel = (type: string) => {
+    const labels: Record<string, string> = {
+        cash: 'Cash',
+        bank: 'Bank',
+        digital_wallet: 'E-Wallet',
+        investment: 'Investasi',
+        credit_card: 'Kartu Kredit',
+    };
+
+    return labels[type] || type;
+};
+
 const netStatusText = computed(() => {
     if (props.netBalance > 0) return 'Surplus bulan ini';
     if (props.netBalance < 0) return 'Defisit bulan ini';
 
     return 'Seimbang bulan ini';
+});
+
+const budgetOverallStatus = computed(() => {
+    const percentage = Number(safeBudgetSummary.value.totalPercentage || 0);
+
+    if (percentage >= 100) return 'over';
+    if (percentage >= 80) return 'warning';
+
+    return 'safe';
 });
 
 const getBudgetStatusLabel = (status: string) => {
@@ -318,7 +366,9 @@ const getBudgetProgressClass = (status: string) => {
 
     <div class="space-y-6 p-4 sm:p-6 lg:p-8">
         <!-- Header -->
-        <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div
+            class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
+        >
             <div>
                 <h1 class="text-2xl font-bold text-gray-900 sm:text-3xl dark:text-white">
                     Dashboard
@@ -334,7 +384,11 @@ const getBudgetProgressClass = (status: string) => {
                 <select
                     :value="selectedYear"
                     class="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
-                    @change="handleYearChange(Number(($event.target as HTMLSelectElement).value))"
+                    @change="
+                        handleYearChange(
+                            Number(($event.target as HTMLSelectElement).value),
+                        )
+                    "
                 >
                     <option
                         v-for="year in safeAvailableYears"
@@ -347,9 +401,121 @@ const getBudgetProgressClass = (status: string) => {
             </div>
         </div>
 
+        <!-- Quick Actions -->
+        <div
+            class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900"
+        >
+            <div
+                class="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"
+            >
+                <div>
+                    <h2 class="text-lg font-semibold text-gray-900 dark:text-white">
+                        Aksi Cepat
+                    </h2>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">
+                        Tambahkan data penting tanpa perlu membuka menu satu per satu.
+                    </p>
+                </div>
+
+                <Plus class="hidden h-5 w-5 text-gray-400 sm:block" />
+            </div>
+
+            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                <Link
+                    href="/transactions/create"
+                    class="group rounded-xl border border-gray-200 bg-gray-50 p-4 transition hover:border-emerald-200 hover:bg-emerald-50 dark:border-gray-800 dark:bg-gray-800 dark:hover:border-emerald-900 dark:hover:bg-emerald-950/30"
+                >
+                    <div class="flex items-center gap-3">
+                        <div
+                            class="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-100 text-emerald-600 transition group-hover:bg-emerald-600 group-hover:text-white dark:bg-emerald-950 dark:text-emerald-300"
+                        >
+                            <CircleDollarSign class="h-5 w-5" />
+                        </div>
+
+                        <div class="min-w-0">
+                            <p class="font-semibold text-gray-900 dark:text-white">
+                                Tambah Transaksi
+                            </p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400">
+                                Catat pemasukan/pengeluaran
+                            </p>
+                        </div>
+                    </div>
+                </Link>
+
+                <Link
+                    href="/budgets"
+                    class="group rounded-xl border border-gray-200 bg-gray-50 p-4 transition hover:border-indigo-200 hover:bg-indigo-50 dark:border-gray-800 dark:bg-gray-800 dark:hover:border-indigo-900 dark:hover:bg-indigo-950/30"
+                >
+                    <div class="flex items-center gap-3">
+                        <div
+                            class="flex h-11 w-11 items-center justify-center rounded-xl bg-indigo-100 text-indigo-600 transition group-hover:bg-indigo-600 group-hover:text-white dark:bg-indigo-950 dark:text-indigo-300"
+                        >
+                            <PiggyBank class="h-5 w-5" />
+                        </div>
+
+                        <div class="min-w-0">
+                            <p class="font-semibold text-gray-900 dark:text-white">
+                                Tambah Budget
+                            </p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400">
+                                Atur batas pengeluaran
+                            </p>
+                        </div>
+                    </div>
+                </Link>
+
+                <Link
+                    href="/notes/create"
+                    class="group rounded-xl border border-gray-200 bg-gray-50 p-4 transition hover:border-yellow-200 hover:bg-yellow-50 dark:border-gray-800 dark:bg-gray-800 dark:hover:border-yellow-900 dark:hover:bg-yellow-950/30"
+                >
+                    <div class="flex items-center gap-3">
+                        <div
+                            class="flex h-11 w-11 items-center justify-center rounded-xl bg-yellow-100 text-yellow-600 transition group-hover:bg-yellow-500 group-hover:text-white dark:bg-yellow-950 dark:text-yellow-300"
+                        >
+                            <NotebookText class="h-5 w-5" />
+                        </div>
+
+                        <div class="min-w-0">
+                            <p class="font-semibold text-gray-900 dark:text-white">
+                                Tambah Catatan
+                            </p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400">
+                                Simpan catatan keuangan
+                            </p>
+                        </div>
+                    </div>
+                </Link>
+
+                <Link
+                    href="/financial-accounts/create"
+                    class="group rounded-xl border border-gray-200 bg-gray-50 p-4 transition hover:border-blue-200 hover:bg-blue-50 dark:border-gray-800 dark:bg-gray-800 dark:hover:border-blue-900 dark:hover:bg-blue-950/30"
+                >
+                    <div class="flex items-center gap-3">
+                        <div
+                            class="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-100 text-blue-600 transition group-hover:bg-blue-600 group-hover:text-white dark:bg-blue-950 dark:text-blue-300"
+                        >
+                            <Landmark class="h-5 w-5" />
+                        </div>
+
+                        <div class="min-w-0">
+                            <p class="font-semibold text-gray-900 dark:text-white">
+                                Tambah Akun
+                            </p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400">
+                                Buat akun keuangan baru
+                            </p>
+                        </div>
+                    </div>
+                </Link>
+            </div>
+        </div>
+
         <!-- Summary Cards -->
         <div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <div class="rounded-2xl border border-blue-100 bg-white p-5 shadow-sm dark:border-blue-900/40 dark:bg-gray-900">
+            <div
+                class="rounded-2xl border border-blue-100 bg-white p-5 shadow-sm dark:border-blue-900/40 dark:bg-gray-900"
+            >
                 <div class="flex items-center justify-between">
                     <div>
                         <p class="text-sm font-medium text-gray-500 dark:text-gray-400">
@@ -360,7 +526,9 @@ const getBudgetProgressClass = (status: string) => {
                         </p>
                     </div>
 
-                    <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-950 dark:text-blue-300">
+                    <div
+                        class="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-950 dark:text-blue-300"
+                    >
                         <Wallet class="h-6 w-6" />
                     </div>
                 </div>
@@ -370,7 +538,9 @@ const getBudgetProgressClass = (status: string) => {
                 </p>
             </div>
 
-            <div class="rounded-2xl border border-emerald-100 bg-white p-5 shadow-sm dark:border-emerald-900/40 dark:bg-gray-900">
+            <div
+                class="rounded-2xl border border-emerald-100 bg-white p-5 shadow-sm dark:border-emerald-900/40 dark:bg-gray-900"
+            >
                 <div class="flex items-center justify-between">
                     <div>
                         <p class="text-sm font-medium text-gray-500 dark:text-gray-400">
@@ -381,18 +551,24 @@ const getBudgetProgressClass = (status: string) => {
                         </p>
                     </div>
 
-                    <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-300">
+                    <div
+                        class="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-300"
+                    >
                         <TrendingUp class="h-6 w-6" />
                     </div>
                 </div>
 
-                <div class="mt-4 flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400">
+                <div
+                    class="mt-4 flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400"
+                >
                     <ArrowUpRight class="h-3.5 w-3.5" />
                     Ringkasan pemasukan bulan ini
                 </div>
             </div>
 
-            <div class="rounded-2xl border border-red-100 bg-white p-5 shadow-sm dark:border-red-900/40 dark:bg-gray-900">
+            <div
+                class="rounded-2xl border border-red-100 bg-white p-5 shadow-sm dark:border-red-900/40 dark:bg-gray-900"
+            >
                 <div class="flex items-center justify-between">
                     <div>
                         <p class="text-sm font-medium text-gray-500 dark:text-gray-400">
@@ -403,18 +579,24 @@ const getBudgetProgressClass = (status: string) => {
                         </p>
                     </div>
 
-                    <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-red-50 text-red-600 dark:bg-red-950 dark:text-red-300">
+                    <div
+                        class="flex h-12 w-12 items-center justify-center rounded-xl bg-red-50 text-red-600 dark:bg-red-950 dark:text-red-300"
+                    >
                         <TrendingDown class="h-6 w-6" />
                     </div>
                 </div>
 
-                <div class="mt-4 flex items-center gap-1 text-xs text-red-600 dark:text-red-400">
+                <div
+                    class="mt-4 flex items-center gap-1 text-xs text-red-600 dark:text-red-400"
+                >
                     <ArrowDownRight class="h-3.5 w-3.5" />
                     Ringkasan pengeluaran bulan ini
                 </div>
             </div>
 
-            <div class="rounded-2xl border border-purple-100 bg-white p-5 shadow-sm dark:border-purple-900/40 dark:bg-gray-900">
+            <div
+                class="rounded-2xl border border-purple-100 bg-white p-5 shadow-sm dark:border-purple-900/40 dark:bg-gray-900"
+            >
                 <div class="flex items-center justify-between">
                     <div>
                         <p class="text-sm font-medium text-gray-500 dark:text-gray-400">
@@ -432,7 +614,9 @@ const getBudgetProgressClass = (status: string) => {
                         </p>
                     </div>
 
-                    <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-purple-50 text-purple-600 dark:bg-purple-950 dark:text-purple-300">
+                    <div
+                        class="flex h-12 w-12 items-center justify-center rounded-xl bg-purple-50 text-purple-600 dark:bg-purple-950 dark:text-purple-300"
+                    >
                         <CreditCard class="h-6 w-6" />
                     </div>
                 </div>
@@ -444,10 +628,16 @@ const getBudgetProgressClass = (status: string) => {
         </div>
 
         <!-- Budget Overview -->
-        <div class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900">
-            <div class="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div
+            class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900"
+        >
+            <div
+                class="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+            >
                 <div class="flex items-center gap-3">
-                    <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 dark:bg-indigo-950 dark:text-indigo-300">
+                    <div
+                        class="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 dark:bg-indigo-950 dark:text-indigo-300"
+                    >
                         <PiggyBank class="h-5 w-5" />
                     </div>
 
@@ -456,40 +646,28 @@ const getBudgetProgressClass = (status: string) => {
                             Budget Bulanan
                         </h2>
                         <p class="text-sm text-gray-500 dark:text-gray-400">
-                            Pantau penggunaan budget bulan {{ safeBudgetSummary.month }}.
+                            Pantau penggunaan budget bulan
+                            {{ safeBudgetSummary.month }}.
                         </p>
                     </div>
                 </div>
 
                 <Link
                     href="/budgets"
-                    class="inline-flex items-center justify-center rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
+                    class="inline-flex items-center justify-center rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
                 >
                     Kelola Budget
                 </Link>
             </div>
 
-            <div
+            <EmptyState
                 v-if="safeBudgetSummary.totalBudget <= 0"
-                class="rounded-xl border border-dashed border-gray-200 py-10 text-center dark:border-gray-700"
-            >
-                <PiggyBank class="mx-auto h-10 w-10 text-gray-400" />
-
-                <h3 class="mt-3 font-semibold text-gray-900 dark:text-white">
-                    Belum ada budget bulan ini
-                </h3>
-
-                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                    Buat budget untuk mengontrol pengeluaran tiap kategori.
-                </p>
-
-                <Link
-                    href="/budgets"
-                    class="mt-4 inline-flex rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-                >
-                    Tambah Budget
-                </Link>
-            </div>
+                :icon="PiggyBank"
+                title="Belum ada budget bulan ini"
+                description="Buat budget untuk mengontrol pengeluaran tiap kategori."
+                action-label="Tambah Budget"
+                action-href="/budgets"
+            />
 
             <div v-else class="space-y-5">
                 <div class="grid grid-cols-1 gap-4 md:grid-cols-5">
@@ -554,7 +732,9 @@ const getBudgetProgressClass = (status: string) => {
                 </div>
 
                 <div>
-                    <div class="mb-1 flex justify-between text-xs text-gray-500 dark:text-gray-400">
+                    <div
+                        class="mb-1 flex justify-between text-xs text-gray-500 dark:text-gray-400"
+                    >
                         <span>Total penggunaan budget</span>
                         <span>{{ safeBudgetSummary.totalPercentage }}%</span>
                     </div>
@@ -562,13 +742,7 @@ const getBudgetProgressClass = (status: string) => {
                     <div class="h-3 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800">
                         <div
                             class="h-full rounded-full transition-all"
-                            :class="
-                                safeBudgetSummary.totalPercentage >= 100
-                                    ? 'bg-red-500'
-                                    : safeBudgetSummary.totalPercentage >= 80
-                                      ? 'bg-yellow-500'
-                                      : 'bg-emerald-500'
-                            "
+                            :class="getBudgetProgressClass(budgetOverallStatus)"
                             :style="{
                                 width: Math.min(safeBudgetSummary.totalPercentage, 100) + '%',
                             }"
@@ -591,7 +765,7 @@ const getBudgetProgressClass = (status: string) => {
                         <div
                             v-for="budget in safeBudgetSummary.warnings"
                             :key="budget.id"
-                            class="flex flex-col gap-2 rounded-lg bg-white p-3 text-sm dark:bg-gray-900 sm:flex-row sm:items-center sm:justify-between"
+                            class="flex flex-col gap-2 rounded-lg bg-white p-3 text-sm sm:flex-row sm:items-center sm:justify-between dark:bg-gray-900"
                         >
                             <div>
                                 <p class="font-medium text-gray-900 dark:text-white">
@@ -666,8 +840,12 @@ const getBudgetProgressClass = (status: string) => {
         </div>
 
         <!-- Main Chart -->
-        <div class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900">
-            <div class="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div
+            class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900"
+        >
+            <div
+                class="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+            >
                 <div>
                     <h2 class="text-lg font-semibold text-gray-900 dark:text-white">
                         Pemasukan vs Pengeluaran
@@ -679,13 +857,22 @@ const getBudgetProgressClass = (status: string) => {
 
                 <Link
                     href="/transactions"
-                    class="inline-flex items-center justify-center rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
+                    class="inline-flex items-center justify-center rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
                 >
                     Lihat Transaksi
                 </Link>
             </div>
 
-            <div class="h-80">
+            <EmptyState
+                v-if="!hasChartData"
+                :icon="BarChart3"
+                title="Belum ada data grafik"
+                description="Tambahkan transaksi pemasukan atau pengeluaran untuk melihat grafik."
+                action-label="Tambah Transaksi"
+                action-href="/transactions/create"
+            />
+
+            <div v-else class="h-80">
                 <Bar :data="combinedChartData" :options="chartOptions" />
             </div>
         </div>
@@ -693,10 +880,14 @@ const getBudgetProgressClass = (status: string) => {
         <!-- Transactions + Accounts -->
         <div class="grid grid-cols-1 gap-6 xl:grid-cols-3">
             <div class="xl:col-span-2">
-                <div class="h-full rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+                <div
+                    class="h-full rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900"
+                >
                     <div class="mb-4 flex items-center justify-between">
                         <div class="flex items-center gap-2">
-                            <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600 dark:bg-indigo-950 dark:text-indigo-300">
+                            <div
+                                class="flex h-9 w-9 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600 dark:bg-indigo-950 dark:text-indigo-300"
+                            >
                                 <FileText class="h-5 w-5" />
                             </div>
                             <h2 class="text-lg font-semibold text-gray-900 dark:text-white">
@@ -708,16 +899,18 @@ const getBudgetProgressClass = (status: string) => {
                             href="/transactions"
                             class="text-sm font-medium text-indigo-600 hover:text-indigo-700 dark:text-indigo-400"
                         >
-                            View All
+                            Lihat Semua
                         </Link>
                     </div>
 
-                    <div
+                    <EmptyState
                         v-if="recentTransactions.length === 0"
-                        class="rounded-xl border border-dashed border-gray-200 py-10 text-center text-sm text-gray-500 dark:border-gray-700 dark:text-gray-400"
-                    >
-                        Belum ada transaksi.
-                    </div>
+                        :icon="ReceiptText"
+                        title="Belum ada transaksi"
+                        description="Mulai catat pemasukan atau pengeluaran pertamamu."
+                        action-label="Tambah Transaksi"
+                        action-href="/transactions/create"
+                    />
 
                     <div v-else class="space-y-3">
                         <div
@@ -762,10 +955,14 @@ const getBudgetProgressClass = (status: string) => {
             </div>
 
             <div>
-                <div class="h-full rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+                <div
+                    class="h-full rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900"
+                >
                     <div class="mb-4 flex items-center justify-between">
                         <div class="flex items-center gap-2">
-                            <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-50 text-blue-600 dark:bg-blue-950 dark:text-blue-300">
+                            <div
+                                class="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-50 text-blue-600 dark:bg-blue-950 dark:text-blue-300"
+                            >
                                 <Landmark class="h-5 w-5" />
                             </div>
                             <h2 class="text-lg font-semibold text-gray-900 dark:text-white">
@@ -777,16 +974,18 @@ const getBudgetProgressClass = (status: string) => {
                             href="/financial-accounts"
                             class="text-sm font-medium text-indigo-600 hover:text-indigo-700 dark:text-indigo-400"
                         >
-                            Manage
+                            Kelola
                         </Link>
                     </div>
 
-                    <div
+                    <EmptyState
                         v-if="accountSummary.length === 0"
-                        class="rounded-xl border border-dashed border-gray-200 py-10 text-center text-sm text-gray-500 dark:border-gray-700 dark:text-gray-400"
-                    >
-                        Belum ada akun.
-                    </div>
+                        :icon="Landmark"
+                        title="Belum ada akun"
+                        description="Tambahkan akun keuangan seperti cash, bank, atau e-wallet."
+                        action-label="Tambah Akun"
+                        action-href="/financial-accounts/create"
+                    />
 
                     <div v-else class="space-y-3">
                         <div
@@ -799,8 +998,10 @@ const getBudgetProgressClass = (status: string) => {
                                     {{ account.name }}
                                 </p>
 
-                                <span class="shrink-0 rounded-full bg-gray-200 px-2 py-1 text-xs text-gray-700 dark:bg-gray-700 dark:text-gray-300">
-                                    {{ account.type }}
+                                <span
+                                    class="shrink-0 rounded-full bg-gray-200 px-2 py-1 text-xs text-gray-700 dark:bg-gray-700 dark:text-gray-300"
+                                >
+                                    {{ getAccountTypeLabel(account.type) }}
                                 </span>
                             </div>
 
@@ -819,10 +1020,14 @@ const getBudgetProgressClass = (status: string) => {
         </div>
 
         <!-- Recent Notes -->
-        <div class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+        <div
+            class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900"
+        >
             <div class="mb-4 flex items-center justify-between">
                 <div class="flex items-center gap-2">
-                    <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-yellow-50 text-yellow-600 dark:bg-yellow-950 dark:text-yellow-300">
+                    <div
+                        class="flex h-9 w-9 items-center justify-center rounded-lg bg-yellow-50 text-yellow-600 dark:bg-yellow-950 dark:text-yellow-300"
+                    >
                         <NotebookText class="h-5 w-5" />
                     </div>
                     <h2 class="text-lg font-semibold text-gray-900 dark:text-white">
@@ -834,16 +1039,18 @@ const getBudgetProgressClass = (status: string) => {
                     href="/notes"
                     class="text-sm font-medium text-indigo-600 hover:text-indigo-700 dark:text-indigo-400"
                 >
-                    View All
+                    Lihat Semua
                 </Link>
             </div>
 
-            <div
+            <EmptyState
                 v-if="recentNotes.length === 0"
-                class="rounded-xl border border-dashed border-gray-200 py-10 text-center text-sm text-gray-500 dark:border-gray-700 dark:text-gray-400"
-            >
-                Belum ada catatan.
-            </div>
+                :icon="NotebookText"
+                title="Belum ada catatan"
+                description="Buat catatan untuk menyimpan pengingat atau informasi penting."
+                action-label="Tambah Catatan"
+                action-href="/notes/create"
+            />
 
             <div v-else class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
                 <div

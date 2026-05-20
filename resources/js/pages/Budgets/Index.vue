@@ -2,6 +2,8 @@
 import { Head, router } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 import AppLayout from '@/layouts/AppLayout.vue';
+import DeleteConfirmModal from '@/components/DeleteConfirmModal.vue';
+import EmptyState from '@/components/EmptyState.vue';
 import {
     PiggyBank,
     Plus,
@@ -176,8 +178,6 @@ const openEdit = (budget) => {
 };
 
 const closeForm = () => {
-    if (processing.value) return;
-
     showForm.value = false;
     resetForm();
 };
@@ -195,7 +195,10 @@ const submitForm = () => {
 
     const options = {
         preserveScroll: true,
-        onSuccess: () => closeForm(),
+        onSuccess: () => {
+            showForm.value = false;
+            resetForm();
+        },
         onError: (err) => {
             errors.value = err;
         },
@@ -218,8 +221,6 @@ const openDeleteModal = (budget) => {
 };
 
 const closeDeleteModal = () => {
-    if (deleteProcessing.value) return;
-
     selectedDeleteBudget.value = null;
     showDeleteModal.value = false;
 };
@@ -231,7 +232,6 @@ const confirmDeleteBudget = () => {
 
     router.delete(`/budgets/${selectedDeleteBudget.value.id}`, {
         preserveScroll: true,
-        onSuccess: () => closeDeleteModal(),
         onError: (err) => {
             errors.value = err;
         },
@@ -250,11 +250,10 @@ const confirmDeleteBudget = () => {
             class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between"
         >
             <div>
-                <h1 class="text-2xl font-bold">
-                    Budget Bulanan
-                </h1>
+                <h1 class="text-2xl font-bold">Budget Bulanan</h1>
                 <p class="text-sm text-muted-foreground">
-                    Atur alokasi pengeluaran dari saldo akun keuangan per kategori.
+                    Atur alokasi pengeluaran dari saldo akun keuangan per
+                    kategori.
                 </p>
             </div>
 
@@ -290,9 +289,7 @@ const confirmDeleteBudget = () => {
             <div class="rounded-xl border bg-card p-5 shadow-sm">
                 <div class="flex items-center justify-between">
                     <div>
-                        <p class="text-sm text-muted-foreground">
-                            Saldo Akun
-                        </p>
+                        <p class="text-sm text-muted-foreground">Saldo Akun</p>
                         <p class="mt-2 text-xl font-bold">
                             {{ formatCurrency(summary.totalAccountBalance) }}
                         </p>
@@ -342,9 +339,7 @@ const confirmDeleteBudget = () => {
             <div class="rounded-xl border bg-card p-5 shadow-sm">
                 <div class="flex items-center justify-between">
                     <div>
-                        <p class="text-sm text-muted-foreground">
-                            Terpakai
-                        </p>
+                        <p class="text-sm text-muted-foreground">Terpakai</p>
                         <p class="mt-2 text-xl font-bold text-red-500">
                             {{ formatCurrency(summary.totalUsed) }}
                         </p>
@@ -357,9 +352,7 @@ const confirmDeleteBudget = () => {
             <div class="rounded-xl border bg-card p-5 shadow-sm">
                 <div class="flex items-center justify-between">
                     <div>
-                        <p class="text-sm text-muted-foreground">
-                            Sisa Budget
-                        </p>
+                        <p class="text-sm text-muted-foreground">Sisa Budget</p>
                         <p
                             :class="[
                                 'mt-2 text-xl font-bold',
@@ -377,10 +370,7 @@ const confirmDeleteBudget = () => {
                         class="h-8 w-8 text-yellow-500"
                     />
 
-                    <CheckCircle2
-                        v-else
-                        class="h-8 w-8 text-emerald-500"
-                    />
+                    <CheckCircle2 v-else class="h-8 w-8 text-emerald-500" />
                 </div>
             </div>
         </div>
@@ -388,9 +378,7 @@ const confirmDeleteBudget = () => {
         <div class="rounded-xl border bg-card p-5 shadow-sm">
             <div class="mb-3 flex items-center justify-between">
                 <div>
-                    <h2 class="font-semibold">
-                        Progress Budget Bulanan
-                    </h2>
+                    <h2 class="font-semibold">Progress Budget Bulanan</h2>
                     <p class="text-sm text-muted-foreground">
                         Total penggunaan budget bulan {{ selectedMonth }}.
                     </p>
@@ -406,7 +394,9 @@ const confirmDeleteBudget = () => {
                 </span>
             </div>
 
-            <div class="mb-1 flex justify-between text-xs text-muted-foreground">
+            <div
+                class="mb-1 flex justify-between text-xs text-muted-foreground"
+            >
                 <span>Terpakai</span>
                 <span>{{ summary.totalPercentage || 0 }}%</span>
             </div>
@@ -416,7 +406,8 @@ const confirmDeleteBudget = () => {
                     class="h-full rounded-full transition-all"
                     :class="getProgressClass(budgetStatus)"
                     :style="{
-                        width: Math.min(summary.totalPercentage || 0, 100) + '%',
+                        width:
+                            Math.min(summary.totalPercentage || 0, 100) + '%',
                     }"
                 ></div>
             </div>
@@ -425,36 +416,23 @@ const confirmDeleteBudget = () => {
         <div class="rounded-xl border bg-card p-5 shadow-sm">
             <div class="mb-4 flex items-center justify-between">
                 <div>
-                    <h2 class="font-semibold">
-                        Daftar Budget
-                    </h2>
+                    <h2 class="font-semibold">Daftar Budget</h2>
                     <p class="text-sm text-muted-foreground">
-                        Budget dihitung dari transaksi pengeluaran berdasarkan kategori.
+                        Budget dihitung dari transaksi pengeluaran berdasarkan
+                        kategori.
                     </p>
                 </div>
             </div>
 
-            <div
+            <EmptyState
                 v-if="budgets.length === 0"
-                class="rounded-xl border border-dashed py-12 text-center"
-            >
-                <PiggyBank class="mx-auto h-10 w-10 text-muted-foreground" />
-                <h3 class="mt-3 font-semibold">
-                    Belum ada budget
-                </h3>
-                <p class="mx-auto mt-1 max-w-md text-sm text-muted-foreground">
-                    Buat budget pertama untuk mengatur batas pengeluaran dari saldo akunmu.
-                </p>
-
-                <button
-                    type="button"
-                    :disabled="!hasCategories"
-                    class="mt-4 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-400"
-                    @click="openCreate"
-                >
-                    Tambah Budget
-                </button>
-            </div>
+                :icon="PiggyBank"
+                title="Belum ada budget"
+                description="Buat budget pertama untuk mengatur batas pengeluaran dari saldo akunmu."
+                action-label="Tambah Budget"
+                button-type="button"
+                @action="openCreate"
+            />
 
             <div v-else class="space-y-4">
                 <div
@@ -515,9 +493,7 @@ const confirmDeleteBudget = () => {
 
                     <div class="grid grid-cols-1 gap-3 md:grid-cols-3">
                         <div>
-                            <p class="text-xs text-muted-foreground">
-                                Budget
-                            </p>
+                            <p class="text-xs text-muted-foreground">Budget</p>
                             <p class="font-semibold">
                                 {{ formatCurrency(budget.amount) }}
                             </p>
@@ -533,9 +509,7 @@ const confirmDeleteBudget = () => {
                         </div>
 
                         <div>
-                            <p class="text-xs text-muted-foreground">
-                                Sisa
-                            </p>
+                            <p class="text-xs text-muted-foreground">Sisa</p>
                             <p
                                 :class="[
                                     'font-semibold',
@@ -583,6 +557,7 @@ const confirmDeleteBudget = () => {
         <div
             v-if="showForm"
             class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+            @click.self="closeForm"
         >
             <div class="w-full max-w-lg rounded-xl bg-background p-6 shadow-lg">
                 <div class="mb-6 flex items-start justify-between gap-4">
@@ -592,13 +567,14 @@ const confirmDeleteBudget = () => {
                         </h2>
 
                         <p class="mt-1 text-sm text-muted-foreground">
-                            Tentukan alokasi budget dari saldo akun untuk kategori pengeluaran.
+                            Tentukan alokasi budget dari saldo akun untuk
+                            kategori pengeluaran.
                         </p>
                     </div>
 
                     <button
                         type="button"
-                        class="rounded-lg p-2 hover:bg-muted"
+                        class="rounded-lg p-2 hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
                         :disabled="processing"
                         @click="closeForm"
                     >
@@ -617,9 +593,7 @@ const confirmDeleteBudget = () => {
                             class="w-full rounded-lg border bg-background px-3 py-2"
                             :disabled="processing"
                         >
-                            <option value="">
-                                Pilih kategori
-                            </option>
+                            <option value="">Pilih kategori</option>
 
                             <option
                                 v-for="category in categories"
@@ -674,7 +648,8 @@ const confirmDeleteBudget = () => {
                         />
 
                         <p class="mt-1 text-xs text-muted-foreground">
-                            Nilai ini akan menjadi batas pengeluaran untuk kategori tersebut.
+                            Nilai ini akan menjadi batas pengeluaran untuk
+                            kategori tersebut.
                         </p>
 
                         <p
@@ -735,100 +710,15 @@ const confirmDeleteBudget = () => {
             </div>
         </div>
 
-        <!-- Delete Confirmation Modal -->
-        <div
-            v-if="showDeleteModal"
-            class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-        >
-            <div
-                class="w-full max-w-md rounded-2xl border bg-background p-6 shadow-xl"
-            >
-                <div class="flex items-start gap-4">
-                    <div
-                        class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-red-100 text-red-600 dark:bg-red-950 dark:text-red-300"
-                    >
-                        <Trash2 class="h-6 w-6" />
-                    </div>
-
-                    <div class="min-w-0 flex-1">
-                        <h2 class="text-lg font-semibold">
-                            Hapus Budget?
-                        </h2>
-
-                        <p class="mt-1 text-sm text-muted-foreground">
-                            Budget kategori
-                            <strong class="text-foreground">
-                                {{ selectedDeleteBudget?.category_name }}
-                            </strong>
-                            untuk bulan
-                            <strong class="text-foreground">
-                                {{ selectedDeleteBudget?.month }}
-                            </strong>
-                            akan dihapus permanen.
-                        </p>
-                    </div>
-                </div>
-
-                <div
-                    v-if="selectedDeleteBudget"
-                    class="mt-5 rounded-xl border bg-muted/40 p-4"
-                >
-                    <div class="flex items-center justify-between text-sm">
-                        <span class="text-muted-foreground">
-                            Nominal Budget
-                        </span>
-                        <span class="font-semibold">
-                            {{ formatCurrency(selectedDeleteBudget.amount) }}
-                        </span>
-                    </div>
-
-                    <div class="mt-2 flex items-center justify-between text-sm">
-                        <span class="text-muted-foreground">
-                            Terpakai
-                        </span>
-                        <span class="font-semibold text-red-500">
-                            {{ formatCurrency(selectedDeleteBudget.used_amount) }}
-                        </span>
-                    </div>
-
-                    <div class="mt-2 flex items-center justify-between text-sm">
-                        <span class="text-muted-foreground">
-                            Sisa
-                        </span>
-                        <span
-                            :class="[
-                                'font-semibold',
-                                selectedDeleteBudget.remaining_amount >= 0
-                                    ? 'text-emerald-500'
-                                    : 'text-red-500',
-                            ]"
-                        >
-                            {{ formatCurrency(selectedDeleteBudget.remaining_amount) }}
-                        </span>
-                    </div>
-                </div>
-
-                <div class="mt-6 flex justify-end gap-2">
-                    <button
-                        type="button"
-                        class="rounded-lg border px-4 py-2 text-sm transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
-                        :disabled="deleteProcessing"
-                        @click="closeDeleteModal"
-                    >
-                        Batal
-                    </button>
-
-                    <button
-                        type="button"
-                        class="inline-flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-slate-400"
-                        :disabled="deleteProcessing"
-                        @click="confirmDeleteBudget"
-                    >
-                        <Trash2 class="h-4 w-4" />
-                        {{ deleteProcessing ? 'Menghapus...' : 'Ya, Hapus' }}
-                    </button>
-                </div>
-            </div>
-        </div>
+        <DeleteConfirmModal
+            :show="showDeleteModal"
+            title="Hapus Budget?"
+            description="Budget ini akan dihapus permanen dan tidak bisa dikembalikan."
+            :item-name="selectedDeleteBudget?.category_name"
+            :processing="deleteProcessing"
+            confirm-label="Ya, Hapus"
+            @close="closeDeleteModal"
+            @confirm="confirmDeleteBudget"
+        />
     </div>
 </template>

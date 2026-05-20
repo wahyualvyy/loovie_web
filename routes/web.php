@@ -11,6 +11,8 @@ use App\Http\Controllers\AccountExportController;
 use App\Http\Controllers\UserManagementController;
 use App\Http\Controllers\BudgetController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\BackupController;
+use App\Http\Controllers\AccountTransferController;
 use Illuminate\Support\Facades\Route;
 
 Route::inertia('/', 'Welcome')->name('home');
@@ -77,6 +79,20 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('/reports/export/print', [ReportController::class, 'printReport'])
         ->name('reports.export.print');
+
+    // Backup routes
+    Route::get('/backup', [BackupController::class, 'index'])
+        ->name('backup.index');
+
+    Route::get('/backup/export', [BackupController::class, 'export'])
+        ->name('backup.export');
+
+    Route::post('/backup/import', [BackupController::class, 'import'])
+        ->name('backup.import');
+
+    // Account Transfer routes
+    Route::resource('transfers', AccountTransferController::class)
+        ->except(['show']);
 });
 
 require __DIR__ . '/settings.php';

@@ -60,4 +60,14 @@ class FinancialAccount extends Model
 
         $this->update(['current_balance' => $balance]);
     }
+
+    public function outgoingTransfers()
+    {
+        return $this->hasMany(AccountTransfer::class, 'from_account_id');
+    }
+
+    public function incomingTransfers()
+    {
+        return $this->hasMany(AccountTransfer::class, 'to_account_id');
+    }
 }

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
-import { ref, computed } from 'vue';
+import { computed, ref } from 'vue';
 import {
     CreditCard,
     Edit2,
@@ -9,7 +9,12 @@ import {
     Search,
     Download,
     Printer,
+    Wallet,
+    Landmark,
 } from 'lucide-vue-next';
+
+import DeleteConfirmModal from '@/components/DeleteConfirmModal.vue';
+import EmptyState from '@/components/EmptyState.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
@@ -17,7 +22,7 @@ defineOptions({
     layout: {
         breadcrumbs: [
             { title: 'Dashboard', href: '/dashboard' },
-            { title: 'Financial Accounts', href: '/financial-accounts' },
+            { title: 'Akun Keuangan', href: '/financial-accounts' },
         ],
     },
 });
@@ -45,17 +50,47 @@ interface Props {
 }
 
 const props = defineProps<Props>();
-const searchQuery = ref('');
-const showDeleteConfirm = ref(false);
-const accountToDelete = ref<Account | null>(null);
 
-const accountTypes = {
+const searchQuery = ref('');
+const showDeleteModal = ref(false);
+const accountToDelete = ref<Account | null>(null);
+const deleteProcessing = ref(false);
+
+const accountTypes: Record<string, string> = {
     cash: 'Cash',
     bank: 'Bank',
     digital_wallet: 'E-Wallet',
-    investment: 'Investment',
-    credit_card: 'Credit Card',
+    investment: 'Investasi',
+    credit_card: 'Kartu Kredit',
 };
+
+const filteredAccounts = computed(() => {
+    if (!searchQuery.value) return props.accounts.data;
+
+    const keyword = searchQuery.value.toLowerCase();
+
+    return props.accounts.data.filter((account) => {
+        const typeLabel = accountTypes[account.type] || account.type;
+
+        return (
+            account.name.toLowerCase().includes(keyword) ||
+            typeLabel.toLowerCase().includes(keyword) ||
+            (account.description || '').toLowerCase().includes(keyword)
+        );
+    });
+});
+
+const activeAccounts = computed(() => {
+    return props.accounts.data.filter((account) => account.is_active).length;
+});
+
+const inactiveAccounts = computed(() => {
+    return props.accounts.data.filter((account) => !account.is_active).length;
+});
+
+const isFiltered = computed(() => {
+    return Boolean(searchQuery.value);
+});
 
 const getTypeColor = (type: string) => {
     const colors: Record<string, string> = {
@@ -68,50 +103,52 @@ const getTypeColor = (type: string) => {
         credit_card:
             'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
     };
-    return colors[type] || 'bg-gray-100 text-gray-800';
+
+    return colors[type] || 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300';
 };
 
-const filteredAccounts = computed(() => {
-    if (!searchQuery.value) return props.accounts.data;
-    return props.accounts.data.filter(
-        (account) =>
-            account.name
-                .toLowerCase()
-                .includes(searchQuery.value.toLowerCase()) ||
-            accountTypes[account.type as keyof typeof accountTypes]
-                ?.toLowerCase()
-                .includes(searchQuery.value.toLowerCase()),
-    );
-});
-
-const confirmDelete = (account: Account) => {
+const openDeleteModal = (account: Account) => {
     accountToDelete.value = account;
-    showDeleteConfirm.value = true;
+    showDeleteModal.value = true;
+};
+
+const closeDeleteModal = () => {
+    if (deleteProcessing.value) return;
+
+    accountToDelete.value = null;
+    showDeleteModal.value = false;
 };
 
 const deleteAccount = () => {
-    if (accountToDelete.value) {
-        router.delete(`/financial-accounts/${accountToDelete.value.id}`, {
-            onSuccess: () => {
-                showDeleteConfirm.value = false;
-                accountToDelete.value = null;
-            },
-        });
-    }
+    if (!accountToDelete.value) return;
+
+    deleteProcessing.value = true;
+
+    router.delete(`/financial-accounts/${accountToDelete.value.id}`, {
+        preserveScroll: true,
+        onSuccess: () => closeDeleteModal(),
+        onFinish: () => {
+            deleteProcessing.value = false;
+        },
+    });
 };
 
-const formatCurrency = (value: number) => {
+const resetSearch = () => {
+    searchQuery.value = '';
+};
+
+const formatCurrency = (value: number | string | null | undefined) => {
     return new Intl.NumberFormat('id-ID', {
         style: 'currency',
         currency: 'IDR',
         minimumFractionDigits: 0,
         maximumFractionDigits: 0,
-    }).format(value);
+    }).format(Number(value || 0));
 };
 </script>
 
 <template>
-    <Head title="Financial Accounts - Loovie Apps" />
+    <Head title="Akun Keuangan - Loovie Apps" />
 
     <div class="space-y-6 p-4 sm:p-6 lg:p-8">
         <!-- Header -->
@@ -119,43 +156,82 @@ const formatCurrency = (value: number) => {
             class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
         >
             <div>
-                <h1
-                    class="text-3xl font-bold text-gray-900 sm:text-4xl dark:text-white"
-                >
-                    Financial Accounts
+                <h1 class="text-3xl font-bold text-gray-900 sm:text-4xl dark:text-white">
+                    Akun Keuangan
                 </h1>
                 <p class="mt-1 text-gray-600 dark:text-gray-400">
-                    Manage all your financial accounts
+                    Kelola semua akun penyimpanan uangmu.
                 </p>
             </div>
+
             <Link href="/financial-accounts/create">
                 <Button class="bg-indigo-600 text-white hover:bg-indigo-700">
                     <Plus class="mr-2 h-4 w-4" />
-                    Add Account
+                    Tambah Akun
                 </Button>
             </Link>
         </div>
 
-        <!-- Total Balance Card -->
-        <div
-            class="rounded-lg bg-gradient-to-br from-indigo-600 to-purple-600 p-6 text-white shadow-lg"
-        >
-            <p class="text-sm font-medium opacity-90">Total Balance</p>
-            <p class="mt-2 text-3xl font-bold sm:text-4xl">
-                {{ formatCurrency(totalBalance) }}
-            </p>
+        <!-- Summary Cards -->
+        <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
+            <div
+                class="rounded-xl bg-gradient-to-br from-indigo-600 to-purple-600 p-6 text-white shadow-lg"
+            >
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-medium opacity-90">
+                            Total Saldo
+                        </p>
+                        <p class="mt-2 text-3xl font-bold sm:text-4xl">
+                            {{ formatCurrency(totalBalance) }}
+                        </p>
+                    </div>
+
+                    <Wallet class="h-10 w-10 opacity-90" />
+                </div>
+            </div>
+
+            <div class="rounded-xl border bg-card p-6 shadow-sm">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-muted-foreground">
+                            Akun Aktif
+                        </p>
+                        <p class="mt-2 text-3xl font-bold text-emerald-500">
+                            {{ activeAccounts }}
+                        </p>
+                    </div>
+
+                    <Landmark class="h-9 w-9 text-emerald-500" />
+                </div>
+            </div>
+
+            <div class="rounded-xl border bg-card p-6 shadow-sm">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-muted-foreground">
+                            Akun Nonaktif
+                        </p>
+                        <p class="mt-2 text-3xl font-bold text-slate-500">
+                            {{ inactiveAccounts }}
+                        </p>
+                    </div>
+
+                    <CreditCard class="h-9 w-9 text-slate-500" />
+                </div>
+            </div>
         </div>
 
         <!-- Search Bar -->
         <div
-            class="rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-800 dark:bg-gray-900"
+            class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-800 dark:bg-gray-900"
         >
             <div class="relative">
-                <Search class="absolute top-3 left-3 h-5 w-5 text-gray-400" />
+                <Search class="absolute left-3 top-3 h-5 w-5 text-gray-400" />
                 <Input
                     v-model="searchQuery"
                     type="text"
-                    placeholder="Search accounts..."
+                    placeholder="Cari nama akun, tipe, atau deskripsi..."
                     class="rounded-lg border-gray-200 bg-gray-50 pl-10 dark:border-gray-700 dark:bg-gray-800"
                 />
             </div>
@@ -170,6 +246,7 @@ const formatCurrency = (value: number) => {
                 <Download class="h-4 w-4" />
                 Export CSV
             </a>
+
             <a
                 href="/financial-accounts/export/print"
                 target="_blank"
@@ -180,9 +257,26 @@ const formatCurrency = (value: number) => {
             </a>
         </div>
 
-        <!-- Accounts Table - Responsive -->
+        <!-- Empty State -->
+        <EmptyState
+            v-if="filteredAccounts.length === 0"
+            :icon="CreditCard"
+            :title="isFiltered ? 'Akun tidak ditemukan' : 'Belum ada akun keuangan'"
+            :description="
+                isFiltered
+                    ? 'Tidak ada akun yang cocok dengan kata kunci pencarian.'
+                    : 'Tambahkan akun pertama seperti Cash, Bank, E-Wallet, atau Investasi.'
+            "
+            :action-label="isFiltered ? 'Reset Pencarian' : 'Tambah Akun'"
+            :button-type="isFiltered ? 'button' : 'link'"
+            :action-href="isFiltered ? '' : '/financial-accounts/create'"
+            @action="resetSearch"
+        />
+
+        <!-- Accounts Table -->
         <div
-            class="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900"
+            v-else
+            class="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900"
         >
             <!-- Desktop View -->
             <div class="hidden overflow-x-auto md:block">
@@ -191,47 +285,25 @@ const formatCurrency = (value: number) => {
                         class="border-b border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800"
                     >
                         <tr>
-                            <th
-                                class="px-6 py-3 text-left text-sm font-semibold text-gray-900 dark:text-white"
-                            >
-                                Account Name
+                            <th class="px-6 py-3 text-left text-sm font-semibold text-gray-900 dark:text-white">
+                                Nama Akun
                             </th>
-                            <th
-                                class="px-6 py-3 text-left text-sm font-semibold text-gray-900 dark:text-white"
-                            >
-                                Type
+                            <th class="px-6 py-3 text-left text-sm font-semibold text-gray-900 dark:text-white">
+                                Tipe
                             </th>
-                            <th
-                                class="px-6 py-3 text-right text-sm font-semibold text-gray-900 dark:text-white"
-                            >
-                                Balance
+                            <th class="px-6 py-3 text-right text-sm font-semibold text-gray-900 dark:text-white">
+                                Saldo
                             </th>
-                            <th
-                                class="px-6 py-3 text-left text-sm font-semibold text-gray-900 dark:text-white"
-                            >
+                            <th class="px-6 py-3 text-left text-sm font-semibold text-gray-900 dark:text-white">
                                 Status
                             </th>
-                            <th
-                                class="px-6 py-3 text-center text-sm font-semibold text-gray-900 dark:text-white"
-                            >
-                                Actions
+                            <th class="px-6 py-3 text-center text-sm font-semibold text-gray-900 dark:text-white">
+                                Aksi
                             </th>
                         </tr>
                     </thead>
-                    <tbody
-                        class="divide-y divide-gray-200 dark:divide-gray-700"
-                    >
-                        <tr
-                            v-if="filteredAccounts.length === 0"
-                            class="hover:bg-gray-50 dark:hover:bg-gray-800/50"
-                        >
-                            <td
-                                colspan="5"
-                                class="px-6 py-8 text-center text-gray-500 dark:text-gray-400"
-                            >
-                                No accounts found
-                            </td>
-                        </tr>
+
+                    <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
                         <tr
                             v-for="account in filteredAccounts"
                             :key="account.id"
@@ -242,24 +314,20 @@ const formatCurrency = (value: number) => {
                                     <div
                                         class="flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-100 dark:bg-indigo-900/30"
                                     >
-                                        <CreditCard
-                                            class="h-5 w-5 text-indigo-600 dark:text-indigo-400"
-                                        />
+                                        <CreditCard class="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
                                     </div>
-                                    <div>
-                                        <p
-                                            class="font-medium text-gray-900 dark:text-white"
-                                        >
+
+                                    <div class="min-w-0">
+                                        <p class="truncate font-medium text-gray-900 dark:text-white">
                                             {{ account.name }}
                                         </p>
-                                        <p
-                                            class="text-sm text-gray-500 dark:text-gray-400"
-                                        >
-                                            {{ account.description }}
+                                        <p class="truncate text-sm text-gray-500 dark:text-gray-400">
+                                            {{ account.description || '-' }}
                                         </p>
                                     </div>
                                 </div>
                             </td>
+
                             <td class="px-6 py-4">
                                 <span
                                     :class="[
@@ -267,68 +335,54 @@ const formatCurrency = (value: number) => {
                                         getTypeColor(account.type),
                                     ]"
                                 >
-                                    {{
-                                        accountTypes[
-                                            account.type as keyof typeof accountTypes
-                                        ]
-                                    }}
+                                    {{ accountTypes[account.type] || account.type }}
                                 </span>
                             </td>
+
                             <td class="px-6 py-4 text-right">
-                                <p
-                                    class="font-semibold text-gray-900 dark:text-white"
-                                >
-                                    {{
-                                        formatCurrency(account.current_balance)
-                                    }}
+                                <p class="font-semibold text-gray-900 dark:text-white">
+                                    {{ formatCurrency(account.current_balance) }}
                                 </p>
-                                <p
-                                    class="text-sm text-gray-500 dark:text-gray-400"
-                                >
-                                    Initial:
-                                    {{
-                                        formatCurrency(account.initial_balance)
-                                    }}
+                                <p class="text-sm text-gray-500 dark:text-gray-400">
+                                    Awal:
+                                    {{ formatCurrency(account.initial_balance) }}
                                 </p>
                             </td>
+
                             <td class="px-6 py-4">
                                 <span
                                     v-if="account.is_active"
                                     class="rounded-full bg-green-100 px-3 py-1 text-sm font-medium text-green-800 dark:bg-green-900/30 dark:text-green-400"
                                 >
-                                    Active
+                                    Aktif
                                 </span>
+
                                 <span
                                     v-else
                                     class="rounded-full bg-gray-100 px-3 py-1 text-sm font-medium text-gray-800 dark:bg-gray-800 dark:text-gray-400"
                                 >
-                                    Inactive
+                                    Nonaktif
                                 </span>
                             </td>
+
                             <td class="px-6 py-4">
-                                <div
-                                    class="flex items-center justify-center space-x-2"
-                                >
+                                <div class="flex items-center justify-center gap-2">
                                     <Link
                                         :href="`/financial-accounts/${account.id}/edit`"
-                                        class="inline-flex"
+                                        class="inline-flex items-center gap-1 rounded-lg border px-3 py-2 text-xs text-blue-600 transition hover:bg-blue-50 dark:border-blue-900 dark:hover:bg-blue-950/40"
                                     >
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            class="text-blue-600 hover:bg-blue-50 hover:text-blue-700 dark:hover:bg-blue-900/20"
-                                        >
-                                            <Edit2 class="h-4 w-4" />
-                                        </Button>
+                                        <Edit2 class="h-4 w-4" />
+                                        Edit
                                     </Link>
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        @click="confirmDelete(account)"
-                                        class="text-red-600 hover:bg-red-50 hover:text-red-700 dark:hover:bg-red-900/20"
+
+                                    <button
+                                        type="button"
+                                        class="inline-flex items-center gap-1 rounded-lg border border-red-200 px-3 py-2 text-xs text-red-600 transition hover:bg-red-50 dark:border-red-900 dark:hover:bg-red-950/40"
+                                        @click="openDeleteModal(account)"
                                     >
                                         <Trash2 class="h-4 w-4" />
-                                    </Button>
+                                        Hapus
+                                    </button>
                                 </div>
                             </td>
                         </tr>
@@ -339,76 +393,61 @@ const formatCurrency = (value: number) => {
             <!-- Mobile View -->
             <div class="md:hidden">
                 <div
-                    v-if="filteredAccounts.length === 0"
-                    class="p-8 text-center text-gray-500 dark:text-gray-400"
-                >
-                    No accounts found
-                </div>
-                <div
                     v-for="account in filteredAccounts"
                     :key="account.id"
                     class="border-b border-gray-200 p-4 last:border-b-0 dark:border-gray-700"
                 >
-                    <div class="mb-3 flex items-start justify-between">
-                        <div class="flex flex-1 items-center space-x-3">
+                    <div class="mb-3 flex items-start justify-between gap-3">
+                        <div class="flex min-w-0 flex-1 items-center space-x-3">
                             <div
-                                class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-indigo-100 dark:bg-indigo-900/30"
+                                class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-indigo-100 dark:bg-indigo-900/30"
                             >
-                                <CreditCard
-                                    class="h-5 w-5 text-indigo-600 dark:text-indigo-400"
-                                />
+                                <CreditCard class="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
                             </div>
+
                             <div class="min-w-0 flex-1">
-                                <p
-                                    class="truncate font-medium text-gray-900 dark:text-white"
-                                >
+                                <p class="truncate font-medium text-gray-900 dark:text-white">
                                     {{ account.name }}
                                 </p>
-                                <p
-                                    class="truncate text-sm text-gray-500 dark:text-gray-400"
-                                >
-                                    {{ account.description }}
+                                <p class="truncate text-sm text-gray-500 dark:text-gray-400">
+                                    {{ account.description || '-' }}
                                 </p>
                             </div>
                         </div>
-                        <div class="ml-2 flex items-center space-x-2">
+
+                        <div class="ml-2 flex items-center gap-2">
                             <Link
                                 :href="`/financial-accounts/${account.id}/edit`"
+                                class="rounded-lg border px-2 py-2 text-blue-600"
                             >
-                                <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    class="text-blue-600"
-                                >
-                                    <Edit2 class="h-4 w-4" />
-                                </Button>
+                                <Edit2 class="h-4 w-4" />
                             </Link>
-                            <Button
-                                variant="ghost"
-                                size="sm"
-                                @click="confirmDelete(account)"
-                                class="text-red-600"
+
+                            <button
+                                type="button"
+                                class="rounded-lg border border-red-200 px-2 py-2 text-red-600"
+                                @click="openDeleteModal(account)"
                             >
                                 <Trash2 class="h-4 w-4" />
-                            </Button>
+                            </button>
                         </div>
                     </div>
+
                     <div class="grid grid-cols-3 gap-2 text-sm">
                         <div>
-                            <p class="text-gray-600 dark:text-gray-400">Type</p>
+                            <p class="text-gray-600 dark:text-gray-400">
+                                Tipe
+                            </p>
                             <span
                                 :class="[
                                     'mt-1 block rounded px-2 py-1 text-center text-xs font-medium',
                                     getTypeColor(account.type),
                                 ]"
                             >
-                                {{
-                                    accountTypes[
-                                        account.type as keyof typeof accountTypes
-                                    ]
-                                }}
+                                {{ accountTypes[account.type] || account.type }}
                             </span>
                         </div>
+
                         <div>
                             <p class="text-gray-600 dark:text-gray-400">
                                 Status
@@ -417,22 +456,22 @@ const formatCurrency = (value: number) => {
                                 v-if="account.is_active"
                                 class="mt-1 block rounded bg-green-100 px-2 py-1 text-center text-xs font-medium text-green-800 dark:bg-green-900/30 dark:text-green-400"
                             >
-                                Active
+                                Aktif
                             </span>
+
                             <span
                                 v-else
                                 class="mt-1 block rounded bg-gray-100 px-2 py-1 text-center text-xs font-medium text-gray-800 dark:bg-gray-800 dark:text-gray-400"
                             >
-                                Inactive
+                                Nonaktif
                             </span>
                         </div>
+
                         <div>
                             <p class="text-gray-600 dark:text-gray-400">
-                                Balance
+                                Saldo
                             </p>
-                            <p
-                                class="mt-1 text-xs font-semibold text-gray-900 dark:text-white"
-                            >
+                            <p class="mt-1 text-xs font-semibold text-gray-900 dark:text-white">
                                 {{ formatCurrency(account.current_balance) }}
                             </p>
                         </div>
@@ -440,41 +479,16 @@ const formatCurrency = (value: number) => {
                 </div>
             </div>
         </div>
-    </div>
 
-    <!-- Delete Confirmation Modal -->
-    <div
-        v-if="showDeleteConfirm"
-        class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 dark:bg-black/70"
-    >
-        <div
-            class="w-full max-w-sm rounded-lg bg-white p-6 shadow-xl dark:bg-gray-900"
-        >
-            <h3
-                class="mb-4 text-lg font-semibold text-gray-900 dark:text-white"
-            >
-                Delete Account
-            </h3>
-            <p class="mb-6 text-gray-600 dark:text-gray-400">
-                Are you sure you want to delete
-                <strong>{{ accountToDelete?.name }}</strong
-                >? This action cannot be undone.
-            </p>
-            <div class="flex items-center justify-end space-x-3">
-                <Button
-                    variant="outline"
-                    @click="showDeleteConfirm = false"
-                    class="px-4 py-2"
-                >
-                    Cancel
-                </Button>
-                <Button
-                    @click="deleteAccount"
-                    class="bg-red-600 px-4 py-2 text-white hover:bg-red-700"
-                >
-                    Delete
-                </Button>
-            </div>
-        </div>
+        <DeleteConfirmModal
+            :show="showDeleteModal"
+            title="Hapus Akun?"
+            description="Akun ini akan dihapus permanen. Jika akun memiliki transaksi, proses hapus bisa ditolak oleh sistem."
+            :item-name="accountToDelete?.name"
+            :processing="deleteProcessing"
+            confirm-label="Ya, Hapus"
+            @close="closeDeleteModal"
+            @confirm="deleteAccount"
+        />
     </div>
 </template>

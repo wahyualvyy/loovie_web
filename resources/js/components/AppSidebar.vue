@@ -9,6 +9,8 @@ import {
     Database,
     BarChart3,
     PiggyBank,
+    ArchiveRestore,
+    Repeat2,
 } from 'lucide-vue-next';
 
 import AppLogo from '@/components/AppLogo.vue';
@@ -40,7 +42,7 @@ const mainNavItems = computed<NavItem[]>(() => {
             icon: LayoutGrid,
         },
         {
-            title: 'Transactions',
+            title: 'Transaksi',
             href: '/transactions',
             icon: TrendingUp,
         },
@@ -50,19 +52,29 @@ const mainNavItems = computed<NavItem[]>(() => {
             icon: PiggyBank,
         },
         {
-            title: 'Reports',
+            title: 'Laporan',
             href: '/reports',
             icon: BarChart3,
         },
         {
-            title: 'Notes',
+            title: 'Transfer',
+            href: '/transfers',
+            icon: Repeat2,
+        },
+        {
+            title: 'Catatan',
             href: '/notes',
             icon: FileText,
         },
         {
-            title: 'Financial Accounts',
+            title: 'Akun Keuangan',
             href: '/financial-accounts',
             icon: CreditCard,
+        },
+        {
+            title: 'Backup',
+            href: '/backup',
+            icon: ArchiveRestore,
         },
     ];
 

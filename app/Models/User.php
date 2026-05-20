@@ -64,4 +64,9 @@ class User extends Authenticatable
             'password' => 'hashed',
         ];
     }
+
+    public function accountTransfers()
+    {
+        return $this->hasMany(AccountTransfer::class);
+    }
 }
