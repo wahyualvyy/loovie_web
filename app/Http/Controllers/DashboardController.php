@@ -2,10 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
-use Carbon\Carbon;
 
 class DashboardController extends Controller
 {
@@ -95,6 +95,10 @@ class DashboardController extends Controller
         // Budget Summary
         $budgetSummary = $this->getBudgetSummary($user, $selectedMonth, $totalBalance);
 
+        // Saving Goals Summary
+        $savingGoalsSummary = $this->getSavingGoalsSummary($user);
+        $activeSavingGoals = $this->getActiveSavingGoals($user);
+
         return Inertia::render('Dashboard', [
             'totalBalance' => $totalBalance,
             'monthlyIncome' => $monthlyIncome,
@@ -107,7 +111,69 @@ class DashboardController extends Controller
             'selectedYear' => (int) $year,
             'availableYears' => $this->getAvailableYears($user),
             'budgetSummary' => $budgetSummary,
+            'savingGoalsSummary' => $savingGoalsSummary,
+            'activeSavingGoals' => $activeSavingGoals,
         ]);
+    }
+
+    private function getSavingGoalsSummary($user): array
+    {
+        $goals = $user->savingGoals();
+
+        $totalGoals = (int) (clone $goals)->count();
+        $activeGoals = (int) (clone $goals)->where('status', 'active')->count();
+        $completedGoals = (int) (clone $goals)->where('status', 'completed')->count();
+        $cancelledGoals = (int) (clone $goals)->where('status', 'cancelled')->count();
+
+        $totalTarget = (float) (clone $goals)->sum('target_amount');
+        $totalCollected = (float) (clone $goals)->sum('current_amount');
+        $totalRemaining = max($totalTarget - $totalCollected, 0);
+
+        $overallProgress = $totalTarget > 0
+            ? min(round(($totalCollected / $totalTarget) * 100), 100)
+            : 0;
+
+        return [
+            'totalGoals' => $totalGoals,
+            'activeGoals' => $activeGoals,
+            'completedGoals' => $completedGoals,
+            'cancelledGoals' => $cancelledGoals,
+            'totalTarget' => $totalTarget,
+            'totalCollected' => $totalCollected,
+            'totalRemaining' => $totalRemaining,
+            'overallProgress' => $overallProgress,
+        ];
+    }
+
+    private function getActiveSavingGoals($user)
+    {
+        return $user->savingGoals()
+            ->where('status', 'active')
+            ->orderBy('target_date')
+            ->orderByDesc('current_amount')
+            ->limit(3)
+            ->get()
+            ->map(function ($goal) {
+                $targetAmount = (float) $goal->target_amount;
+                $currentAmount = (float) $goal->current_amount;
+
+                $progressPercentage = $targetAmount > 0
+                    ? min(round(($currentAmount / $targetAmount) * 100), 100)
+                    : 0;
+
+                return [
+                    'id' => $goal->id,
+                    'title' => $goal->title,
+                    'target_amount' => $targetAmount,
+                    'current_amount' => $currentAmount,
+                    'remaining_amount' => max($targetAmount - $currentAmount, 0),
+                    'progress_percentage' => $progressPercentage,
+                    'target_date' => $goal->target_date,
+                    'status' => $goal->status,
+                    'status_label' => $goal->status_label,
+                    'description' => $goal->description,
+                ];
+            });
     }
 
     private function getBudgetSummary($user, string $selectedMonth, float $totalAccountBalance): array

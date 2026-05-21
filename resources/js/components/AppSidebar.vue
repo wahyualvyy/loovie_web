@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { Link, usePage } from '@inertiajs/vue3';
-import { computed } from 'vue';
 import {
     LayoutGrid,
     TrendingUp,
@@ -11,7 +10,9 @@ import {
     PiggyBank,
     ArchiveRestore,
     Repeat2,
+    Target,
 } from 'lucide-vue-next';
+import { computed } from 'vue';
 
 import AppLogo from '@/components/AppLogo.vue';
 import NavFooter from '@/components/NavFooter.vue';
@@ -60,6 +61,11 @@ const mainNavItems = computed<NavItem[]>(() => {
             title: 'Transfer',
             href: '/transfers',
             icon: Repeat2,
+        },
+        {
+            title: 'Target Tabungan',
+            href: '/saving-goals',
+            icon: Target,
         },
         {
             title: 'Catatan',

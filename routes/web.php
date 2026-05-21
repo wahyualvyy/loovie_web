@@ -13,6 +13,7 @@ use App\Http\Controllers\BudgetController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\BackupController;
 use App\Http\Controllers\AccountTransferController;
+use App\Http\Controllers\SavingGoalController;
 use Illuminate\Support\Facades\Route;
 
 Route::inertia('/', 'Welcome')->name('home');
@@ -92,6 +93,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // Account Transfer routes
     Route::resource('transfers', AccountTransferController::class)
+        ->except(['show']);
+
+    // goals
+    Route::resource('saving-goals', SavingGoalController::class)
         ->except(['show']);
 });
 

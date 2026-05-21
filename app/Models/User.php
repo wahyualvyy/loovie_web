@@ -69,4 +69,9 @@ class User extends Authenticatable
     {
         return $this->hasMany(AccountTransfer::class);
     }
+
+    public function savingGoals()
+    {
+        return $this->hasMany(SavingGoal::class);
+    }
 }

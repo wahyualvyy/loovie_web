@@ -16,6 +16,9 @@ import {
     Plus,
     CircleDollarSign,
     BarChart3,
+    ReceiptText,
+    Target,
+    CheckCircle2,
 } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
 
@@ -112,6 +115,30 @@ interface BudgetSummary {
     items: BudgetItem[];
 }
 
+interface SavingGoalSummary {
+    totalGoals: number;
+    activeGoals: number;
+    completedGoals: number;
+    cancelledGoals: number;
+    totalTarget: number;
+    totalCollected: number;
+    totalRemaining: number;
+    overallProgress: number;
+}
+
+interface SavingGoalItem {
+    id: number;
+    title: string;
+    target_amount: number;
+    current_amount: number;
+    remaining_amount: number;
+    progress_percentage: number;
+    target_date: string | null;
+    status: string;
+    status_label: string;
+    description: string | null;
+}
+
 interface Props {
     totalBalance: number;
     monthlyIncome: number;
@@ -124,6 +151,8 @@ interface Props {
     selectedYear: number;
     availableYears: number[];
     budgetSummary: BudgetSummary;
+    savingGoalsSummary: SavingGoalSummary;
+    activeSavingGoals: SavingGoalItem[];
 }
 
 const props = defineProps<Props>();
@@ -152,6 +181,25 @@ const safeBudgetSummary = computed<BudgetSummary>(() => {
             items: [],
         }
     );
+});
+
+const safeSavingGoalsSummary = computed<SavingGoalSummary>(() => {
+    return (
+        props.savingGoalsSummary || {
+            totalGoals: 0,
+            activeGoals: 0,
+            completedGoals: 0,
+            cancelledGoals: 0,
+            totalTarget: 0,
+            totalCollected: 0,
+            totalRemaining: 0,
+            overallProgress: 0,
+        }
+    );
+});
+
+const safeActiveSavingGoals = computed<SavingGoalItem[]>(() => {
+    return props.activeSavingGoals || [];
 });
 
 const hasChartData = computed(() => {
@@ -374,7 +422,7 @@ const getBudgetProgressClass = (status: string) => {
                     Dashboard
                 </h1>
                 <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
-                    Ringkasan keuangan, budget, transaksi, akun, dan catatan terbaru.
+                    Ringkasan keuangan, budget, target tabungan, transaksi, akun, dan catatan terbaru.
                 </p>
             </div>
 
@@ -420,7 +468,7 @@ const getBudgetProgressClass = (status: string) => {
                 <Plus class="hidden h-5 w-5 text-gray-400 sm:block" />
             </div>
 
-            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
                 <Link
                     href="/transactions/create"
                     class="group rounded-xl border border-gray-200 bg-gray-50 p-4 transition hover:border-emerald-200 hover:bg-emerald-50 dark:border-gray-800 dark:bg-gray-800 dark:hover:border-emerald-900 dark:hover:bg-emerald-950/30"
@@ -460,6 +508,28 @@ const getBudgetProgressClass = (status: string) => {
                             </p>
                             <p class="text-xs text-gray-500 dark:text-gray-400">
                                 Atur batas pengeluaran
+                            </p>
+                        </div>
+                    </div>
+                </Link>
+
+                <Link
+                    href="/saving-goals/create"
+                    class="group rounded-xl border border-gray-200 bg-gray-50 p-4 transition hover:border-purple-200 hover:bg-purple-50 dark:border-gray-800 dark:bg-gray-800 dark:hover:border-purple-900 dark:hover:bg-purple-950/30"
+                >
+                    <div class="flex items-center gap-3">
+                        <div
+                            class="flex h-11 w-11 items-center justify-center rounded-xl bg-purple-100 text-purple-600 transition group-hover:bg-purple-600 group-hover:text-white dark:bg-purple-950 dark:text-purple-300"
+                        >
+                            <Target class="h-5 w-5" />
+                        </div>
+
+                        <div class="min-w-0">
+                            <p class="font-semibold text-gray-900 dark:text-white">
+                                Tambah Target
+                            </p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400">
+                                Buat target tabungan
                             </p>
                         </div>
                     </div>
@@ -833,6 +903,188 @@ const getBudgetProgressClass = (status: string) => {
                                 :class="getBudgetProgressClass(budget.status)"
                                 :style="{ width: Math.min(budget.percentage, 100) + '%' }"
                             ></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Saving Goals Overview -->
+        <div
+            class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900"
+        >
+            <div
+                class="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+            >
+                <div class="flex items-center gap-3">
+                    <div
+                        class="flex h-10 w-10 items-center justify-center rounded-xl bg-purple-50 text-purple-600 dark:bg-purple-950 dark:text-purple-300"
+                    >
+                        <Target class="h-5 w-5" />
+                    </div>
+
+                    <div>
+                        <h2 class="text-lg font-semibold text-gray-900 dark:text-white">
+                            Target Tabungan
+                        </h2>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">
+                            Pantau progress dana darurat, laptop, liburan, atau target lainnya.
+                        </p>
+                    </div>
+                </div>
+
+                <Link
+                    href="/saving-goals"
+                    class="inline-flex items-center justify-center rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
+                >
+                    Lihat Semua Target
+                </Link>
+            </div>
+
+            <EmptyState
+                v-if="safeSavingGoalsSummary.totalGoals <= 0"
+                :icon="Target"
+                title="Belum ada target tabungan"
+                description="Buat target tabungan seperti dana darurat, beli laptop, atau liburan."
+                action-label="Tambah Target"
+                action-href="/saving-goals/create"
+            />
+
+            <div v-else class="space-y-5">
+                <div class="grid grid-cols-1 gap-4 md:grid-cols-4">
+                    <div class="rounded-xl bg-gray-50 p-4 dark:bg-gray-800">
+                        <p class="text-sm text-gray-500 dark:text-gray-400">
+                            Total Target
+                        </p>
+                        <p class="mt-2 text-xl font-bold text-gray-900 dark:text-white">
+                            {{ safeSavingGoalsSummary.totalGoals }}
+                        </p>
+                    </div>
+
+                    <div class="rounded-xl bg-gray-50 p-4 dark:bg-gray-800">
+                        <p class="text-sm text-gray-500 dark:text-gray-400">
+                            Target Aktif
+                        </p>
+                        <p class="mt-2 text-xl font-bold text-blue-600 dark:text-blue-400">
+                            {{ safeSavingGoalsSummary.activeGoals }}
+                        </p>
+                    </div>
+
+                    <div class="rounded-xl bg-gray-50 p-4 dark:bg-gray-800">
+                        <p class="text-sm text-gray-500 dark:text-gray-400">
+                            Terkumpul
+                        </p>
+                        <p class="mt-2 text-xl font-bold text-emerald-600 dark:text-emerald-400">
+                            {{ formatCurrency(safeSavingGoalsSummary.totalCollected) }}
+                        </p>
+                    </div>
+
+                    <div class="rounded-xl bg-gray-50 p-4 dark:bg-gray-800">
+                        <p class="text-sm text-gray-500 dark:text-gray-400">
+                            Sisa Target
+                        </p>
+                        <p class="mt-2 text-xl font-bold text-red-600 dark:text-red-400">
+                            {{ formatCurrency(safeSavingGoalsSummary.totalRemaining) }}
+                        </p>
+                    </div>
+                </div>
+
+                <div>
+                    <div class="mb-1 flex justify-between text-xs text-gray-500 dark:text-gray-400">
+                        <span>
+                            Progress semua target:
+                            {{ formatCurrency(safeSavingGoalsSummary.totalCollected) }}
+                            dari
+                            {{ formatCurrency(safeSavingGoalsSummary.totalTarget) }}
+                        </span>
+                        <span>
+                            {{ safeSavingGoalsSummary.overallProgress }}%
+                        </span>
+                    </div>
+
+                    <div class="h-3 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800">
+                        <div
+                            class="h-full rounded-full bg-purple-500 transition-all"
+                            :style="{
+                                width: Math.min(safeSavingGoalsSummary.overallProgress, 100) + '%',
+                            }"
+                        ></div>
+                    </div>
+                </div>
+
+                <div>
+                    <div class="mb-3 flex items-center justify-between">
+                        <h3 class="text-sm font-semibold text-gray-900 dark:text-white">
+                            Target Aktif Teratas
+                        </h3>
+
+                        <Link
+                            href="/saving-goals/create"
+                            class="text-sm font-medium text-indigo-600 hover:text-indigo-700 dark:text-indigo-400"
+                        >
+                            Tambah Target
+                        </Link>
+                    </div>
+
+                    <EmptyState
+                        v-if="safeActiveSavingGoals.length === 0"
+                        :icon="CheckCircle2"
+                        title="Tidak ada target aktif"
+                        description="Semua target sedang kosong, selesai, atau dibatalkan."
+                        action-label="Tambah Target"
+                        action-href="/saving-goals/create"
+                    />
+
+                    <div v-else class="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+                        <div
+                            v-for="goal in safeActiveSavingGoals"
+                            :key="goal.id"
+                            class="rounded-xl border border-gray-100 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-800"
+                        >
+                            <div class="mb-3 flex items-start justify-between gap-3">
+                                <div class="min-w-0">
+                                    <p class="truncate text-sm font-semibold text-gray-900 dark:text-white">
+                                        {{ goal.title }}
+                                    </p>
+                                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                        Deadline: {{ formatDate(goal.target_date) }}
+                                    </p>
+                                </div>
+
+                                <span class="shrink-0 rounded-full bg-blue-100 px-2 py-1 text-xs font-medium text-blue-700 dark:bg-blue-950 dark:text-blue-300">
+                                    {{ goal.progress_percentage }}%
+                                </span>
+                            </div>
+
+                            <div class="mb-2 flex justify-between text-xs text-gray-500 dark:text-gray-400">
+                                <span>{{ formatCurrency(goal.current_amount) }}</span>
+                                <span>{{ formatCurrency(goal.target_amount) }}</span>
+                            </div>
+
+                            <div class="h-2 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
+                                <div
+                                    class="h-full rounded-full bg-purple-500 transition-all"
+                                    :style="{
+                                        width: Math.min(goal.progress_percentage, 100) + '%',
+                                    }"
+                                ></div>
+                            </div>
+
+                            <div class="mt-3 flex items-center justify-between gap-3 text-xs">
+                                <span class="text-gray-500 dark:text-gray-400">
+                                    Sisa
+                                </span>
+                                <span class="font-semibold text-red-600 dark:text-red-400">
+                                    {{ formatCurrency(goal.remaining_amount) }}
+                                </span>
+                            </div>
+
+                            <Link
+                                :href="`/saving-goals/${goal.id}/edit`"
+                                class="mt-3 inline-flex w-full justify-center rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 transition hover:bg-white dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-900"
+                            >
+                                Edit Target
+                            </Link>
                         </div>
                     </div>
                 </div>
