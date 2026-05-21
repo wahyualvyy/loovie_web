@@ -41,6 +41,14 @@ class Transaction extends Model
     }
 
     /**
+     * Alias for the financial account relation.
+     */
+    public function financialAccount()
+    {
+        return $this->account();
+    }
+
+    /**
      * Get the category for this transaction.
      */
     public function category()

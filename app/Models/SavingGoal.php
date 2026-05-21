@@ -64,4 +64,8 @@ class SavingGoal extends Model
             default => 'Aktif',
         };
     }
+    public function deposits()
+    {
+        return $this->hasMany(SavingGoalDeposit::class);
+    }
 }

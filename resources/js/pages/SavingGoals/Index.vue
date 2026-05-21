@@ -2,21 +2,21 @@
 import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 import {
-    Target,
+    CheckCircle2,
+    Clock3,
+    Edit2,
+    PiggyBank,
     Plus,
     Search,
-    Edit2,
+    Target,
     Trash2,
-    Calendar,
-    CheckCircle2,
-    XCircle,
-    Clock3,
-    PiggyBank,
     Wallet,
+    XCircle,
 } from 'lucide-vue-next';
 
-import EmptyState from '@/components/EmptyState.vue';
 import DeleteConfirmModal from '@/components/DeleteConfirmModal.vue';
+import EmptyState from '@/components/EmptyState.vue';
+import SavingGoalDepositModal from '@/components/SavingGoalDepositModal.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
@@ -43,6 +43,13 @@ interface SavingGoal {
     created_at: string;
 }
 
+interface Account {
+    id: number;
+    name: string;
+    type: string;
+    current_balance: number;
+}
+
 interface Props {
     goals: {
         data: SavingGoal[];
@@ -65,9 +72,13 @@ interface Props {
         search: string | null;
         status: string | null;
     };
+    accounts: Account[];
 }
 
 const props = defineProps<Props>();
+
+const showDepositModal = ref(false);
+const goalToDeposit = ref<SavingGoal | null>(null);
 
 const showDeleteModal = ref(false);
 const goalToDelete = ref<SavingGoal | null>(null);
@@ -79,7 +90,11 @@ const form = useForm({
 });
 
 const totalRemaining = computed(() => {
-    return Number(props.summary.total_target || 0) - Number(props.summary.total_collected || 0);
+    return Math.max(
+        Number(props.summary.total_target || 0) -
+            Number(props.summary.total_collected || 0),
+        0,
+    );
 });
 
 const overallProgress = computed(() => {
@@ -93,6 +108,12 @@ const overallProgress = computed(() => {
 
 const isFiltered = computed(() => {
     return Boolean(form.search || form.status);
+});
+
+const getDeleteItemName = computed(() => {
+    if (!goalToDelete.value) return '';
+
+    return `${goalToDelete.value.title} - ${formatCurrency(goalToDelete.value.target_amount)}`;
 });
 
 const formatCurrency = (value: number | string | null | undefined) => {
@@ -132,6 +153,16 @@ const resetFilters = () => {
             preserveState: true,
         },
     );
+};
+
+const openDepositModal = (goal: SavingGoal) => {
+    goalToDeposit.value = goal;
+    showDepositModal.value = true;
+};
+
+const closeDepositModal = () => {
+    goalToDeposit.value = null;
+    showDepositModal.value = false;
 };
 
 const openDeleteModal = (goal: SavingGoal) => {
@@ -188,12 +219,6 @@ const getProgressColor = (status: string, progress: number) => {
 
     return 'bg-slate-500';
 };
-
-const getDeleteItemName = computed(() => {
-    if (!goalToDelete.value) return '';
-
-    return `${goalToDelete.value.title} - ${formatCurrency(goalToDelete.value.target_amount)}`;
-});
 </script>
 
 <template>
@@ -206,8 +231,10 @@ const getDeleteItemName = computed(() => {
                 <h1 class="text-3xl font-bold text-gray-900 sm:text-4xl dark:text-white">
                     Target Tabungan
                 </h1>
+
                 <p class="mt-1 text-gray-600 dark:text-gray-400">
-                    Kelola target seperti dana darurat, beli laptop, liburan, atau tabungan lainnya.
+                    Kelola target seperti dana darurat, beli laptop, liburan,
+                    atau tabungan lainnya.
                 </p>
             </div>
 
@@ -224,9 +251,14 @@ const getDeleteItemName = computed(() => {
             <div class="rounded-xl border bg-card p-5 shadow-sm">
                 <div class="flex items-center justify-between">
                     <div>
-                        <p class="text-sm text-muted-foreground">Total Target</p>
-                        <p class="mt-2 text-2xl font-bold">{{ summary.total_goals }}</p>
+                        <p class="text-sm text-muted-foreground">
+                            Total Target
+                        </p>
+                        <p class="mt-2 text-2xl font-bold">
+                            {{ summary.total_goals }}
+                        </p>
                     </div>
+
                     <Target class="h-8 w-8 text-indigo-500" />
                 </div>
             </div>
@@ -234,9 +266,14 @@ const getDeleteItemName = computed(() => {
             <div class="rounded-xl border bg-card p-5 shadow-sm">
                 <div class="flex items-center justify-between">
                     <div>
-                        <p class="text-sm text-muted-foreground">Target Aktif</p>
-                        <p class="mt-2 text-2xl font-bold text-blue-500">{{ summary.active_goals }}</p>
+                        <p class="text-sm text-muted-foreground">
+                            Target Aktif
+                        </p>
+                        <p class="mt-2 text-2xl font-bold text-blue-500">
+                            {{ summary.active_goals }}
+                        </p>
                     </div>
+
                     <Clock3 class="h-8 w-8 text-blue-500" />
                 </div>
             </div>
@@ -244,11 +281,14 @@ const getDeleteItemName = computed(() => {
             <div class="rounded-xl border bg-card p-5 shadow-sm">
                 <div class="flex items-center justify-between">
                     <div>
-                        <p class="text-sm text-muted-foreground">Terkumpul</p>
+                        <p class="text-sm text-muted-foreground">
+                            Terkumpul
+                        </p>
                         <p class="mt-2 text-2xl font-bold text-emerald-500">
                             {{ formatCurrency(summary.total_collected) }}
                         </p>
                     </div>
+
                     <PiggyBank class="h-8 w-8 text-emerald-500" />
                 </div>
             </div>
@@ -256,11 +296,14 @@ const getDeleteItemName = computed(() => {
             <div class="rounded-xl border bg-card p-5 shadow-sm">
                 <div class="flex items-center justify-between">
                     <div>
-                        <p class="text-sm text-muted-foreground">Sisa Target</p>
+                        <p class="text-sm text-muted-foreground">
+                            Sisa Target
+                        </p>
                         <p class="mt-2 text-2xl font-bold text-red-500">
                             {{ formatCurrency(totalRemaining) }}
                         </p>
                     </div>
+
                     <Wallet class="h-8 w-8 text-red-500" />
                 </div>
             </div>
@@ -273,9 +316,13 @@ const getDeleteItemName = computed(() => {
         >
             <div class="mb-3 flex items-center justify-between">
                 <div>
-                    <h2 class="font-semibold">Progress Semua Target</h2>
+                    <h2 class="font-semibold">
+                        Progress Semua Target
+                    </h2>
+
                     <p class="text-sm text-muted-foreground">
-                        {{ formatCurrency(summary.total_collected) }} dari {{ formatCurrency(summary.total_target) }}
+                        {{ formatCurrency(summary.total_collected) }} dari
+                        {{ formatCurrency(summary.total_target) }}
                     </p>
                 </div>
 
@@ -297,6 +344,7 @@ const getDeleteItemName = computed(() => {
             <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div class="relative">
                     <Search class="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+
                     <Input
                         v-model="form.search"
                         type="text"
@@ -321,7 +369,10 @@ const getDeleteItemName = computed(() => {
                     Reset
                 </Button>
 
-                <Button class="bg-indigo-600 text-white hover:bg-indigo-700" @click="applyFilters">
+                <Button
+                    class="bg-indigo-600 text-white hover:bg-indigo-700"
+                    @click="applyFilters"
+                >
                     Terapkan Filter
                 </Button>
             </div>
@@ -344,7 +395,10 @@ const getDeleteItemName = computed(() => {
         />
 
         <!-- Goals Grid -->
-        <div v-else class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <div
+            v-else
+            class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3"
+        >
             <div
                 v-for="goal in goals.data"
                 :key="goal.id"
@@ -360,6 +414,7 @@ const getDeleteItemName = computed(() => {
                             <h3 class="truncate font-semibold text-gray-900 dark:text-white">
                                 {{ goal.title }}
                             </h3>
+
                             <p class="mt-1 text-xs text-muted-foreground">
                                 Deadline: {{ formatDate(goal.target_date) }}
                             </p>
@@ -372,7 +427,10 @@ const getDeleteItemName = computed(() => {
                             getStatusClass(goal.status),
                         ]"
                     >
-                        <component :is="getStatusIcon(goal.status)" class="h-3 w-3" />
+                        <component
+                            :is="getStatusIcon(goal.status)"
+                            class="h-3 w-3"
+                        />
                         {{ goal.status_label }}
                     </span>
                 </div>
@@ -380,14 +438,18 @@ const getDeleteItemName = computed(() => {
                 <div class="space-y-3">
                     <div class="grid grid-cols-2 gap-3">
                         <div class="rounded-xl bg-muted/40 p-3">
-                            <p class="text-xs text-muted-foreground">Terkumpul</p>
+                            <p class="text-xs text-muted-foreground">
+                                Terkumpul
+                            </p>
                             <p class="mt-1 font-bold text-emerald-500">
                                 {{ formatCurrency(goal.current_amount) }}
                             </p>
                         </div>
 
                         <div class="rounded-xl bg-muted/40 p-3">
-                            <p class="text-xs text-muted-foreground">Target</p>
+                            <p class="text-xs text-muted-foreground">
+                                Target
+                            </p>
                             <p class="mt-1 font-bold">
                                 {{ formatCurrency(goal.target_amount) }}
                             </p>
@@ -410,7 +472,9 @@ const getDeleteItemName = computed(() => {
                     </div>
 
                     <div class="rounded-xl bg-muted/40 p-3">
-                        <p class="text-xs text-muted-foreground">Sisa</p>
+                        <p class="text-xs text-muted-foreground">
+                            Sisa
+                        </p>
                         <p class="mt-1 font-bold text-red-500">
                             {{ formatCurrency(goal.remaining_amount) }}
                         </p>
@@ -424,10 +488,20 @@ const getDeleteItemName = computed(() => {
                     </p>
                 </div>
 
-                <div class="mt-5 flex gap-2 border-t pt-4 dark:border-gray-800">
+                <div class="mt-5 grid grid-cols-1 gap-2 border-t pt-4 sm:grid-cols-3 dark:border-gray-800">
+                    <button
+                        type="button"
+                        class="inline-flex items-center justify-center gap-2 rounded-lg border border-purple-200 px-3 py-2 text-sm text-purple-600 transition hover:bg-purple-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-purple-900 dark:hover:bg-purple-950/40"
+                        :disabled="goal.status === 'cancelled'"
+                        @click="openDepositModal(goal)"
+                    >
+                        <PiggyBank class="h-4 w-4" />
+                        Setor
+                    </button>
+
                     <Link
                         :href="`/saving-goals/${goal.id}/edit`"
-                        class="inline-flex flex-1 items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm text-blue-600 transition hover:bg-blue-50 dark:border-blue-900 dark:hover:bg-blue-950/40"
+                        class="inline-flex items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm text-blue-600 transition hover:bg-blue-50 dark:border-blue-900 dark:hover:bg-blue-950/40"
                     >
                         <Edit2 class="h-4 w-4" />
                         Edit
@@ -435,7 +509,7 @@ const getDeleteItemName = computed(() => {
 
                     <button
                         type="button"
-                        class="inline-flex flex-1 items-center justify-center gap-2 rounded-lg border border-red-200 px-3 py-2 text-sm text-red-600 transition hover:bg-red-50 dark:border-red-900 dark:hover:bg-red-950/40"
+                        class="inline-flex items-center justify-center gap-2 rounded-lg border border-red-200 px-3 py-2 text-sm text-red-600 transition hover:bg-red-50 dark:border-red-900 dark:hover:bg-red-950/40"
                         @click="openDeleteModal(goal)"
                     >
                         <Trash2 class="h-4 w-4" />
@@ -451,7 +525,8 @@ const getDeleteItemName = computed(() => {
             class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
         >
             <p class="text-sm text-gray-600 dark:text-gray-400">
-                Menampilkan {{ goals.from }} sampai {{ goals.to }} dari {{ goals.total }} target
+                Menampilkan {{ goals.from }} sampai {{ goals.to }} dari
+                {{ goals.total }} target
             </p>
 
             <div class="flex gap-2">
@@ -480,6 +555,13 @@ const getDeleteItemName = computed(() => {
             confirm-label="Ya, Hapus"
             @close="closeDeleteModal"
             @confirm="deleteGoal"
+        />
+
+        <SavingGoalDepositModal
+            :show="showDepositModal"
+            :goal="goalToDeposit"
+            :accounts="accounts"
+            @close="closeDepositModal"
         />
     </div>
 </template>

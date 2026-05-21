@@ -74,4 +74,9 @@ class User extends Authenticatable
     {
         return $this->hasMany(SavingGoal::class);
     }
+
+    public function savingGoalDeposits()
+    {
+        return $this->hasMany(SavingGoalDeposit::class);
+    }
 }

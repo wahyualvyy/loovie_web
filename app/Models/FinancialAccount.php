@@ -70,4 +70,9 @@ class FinancialAccount extends Model
     {
         return $this->hasMany(AccountTransfer::class, 'to_account_id');
     }
+
+    public function savingGoalDeposits()
+    {
+        return $this->hasMany(SavingGoalDeposit::class);
+    }
 }

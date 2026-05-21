@@ -144,7 +144,6 @@ class TransactionController extends Controller
         }
 
         Transaction::create($validated);
-
         $account->calculateBalance();
 
         return Redirect::route('transactions.index')

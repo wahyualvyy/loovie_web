@@ -14,6 +14,7 @@ use App\Http\Controllers\ReportController;
 use App\Http\Controllers\BackupController;
 use App\Http\Controllers\AccountTransferController;
 use App\Http\Controllers\SavingGoalController;
+use App\Http\Controllers\SavingGoalDepositController;
 use Illuminate\Support\Facades\Route;
 
 Route::inertia('/', 'Welcome')->name('home');
@@ -98,6 +99,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // goals
     Route::resource('saving-goals', SavingGoalController::class)
         ->except(['show']);
+
+    // deposits
+    Route::post('saving-goals/{savingGoal}/deposits', [SavingGoalDepositController::class, 'store'])
+        ->name('saving-goals.deposits.store');
+
+    Route::delete('saving-goal-deposits/{deposit}', [SavingGoalDepositController::class, 'destroy'])
+        ->name('saving-goals.deposits.destroy');
 });
 
 require __DIR__ . '/settings.php';

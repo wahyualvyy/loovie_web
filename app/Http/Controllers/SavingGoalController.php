@@ -44,6 +44,15 @@ class SavingGoalController extends Controller
             'goals' => $goals,
             'summary' => $summary,
             'filters' => $request->only(['search', 'status']),
+            'accounts' => $user->financialAccounts()
+                ->where('is_active', true)
+                ->orderBy('name')
+                ->get([
+                    'id',
+                    'name',
+                    'type',
+                    'current_balance',
+                ]),
         ]);
     }
 
@@ -81,8 +90,28 @@ class SavingGoalController extends Controller
     {
         $this->authorizeGoal($savingGoal);
 
+        $savingGoal->load([
+            'deposits' => function ($query) {
+                $query->with('financialAccount')
+                    ->latest('deposit_date')
+                    ->latest();
+            },
+        ]);
+
+        $accounts = auth()->user()
+            ->financialAccounts()
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get([
+                'id',
+                'name',
+                'type',
+                'current_balance',
+            ]);
+
         return Inertia::render('SavingGoals/Edit', [
             'goal' => $savingGoal,
+            'accounts' => $accounts,
         ]);
     }
 

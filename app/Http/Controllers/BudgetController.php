@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Budget;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Redirect;
 use Illuminate\Validation\Rule;
@@ -16,6 +17,8 @@ class BudgetController extends Controller
 
         $selectedMonth = $request->input('month', now()->format('Y-m'));
 
+        $date = Carbon::createFromFormat('Y-m', $selectedMonth);
+
         $totalAccountBalance = (float) $user->financialAccounts()
             ->where('is_active', true)
             ->sum('current_balance');
@@ -24,43 +27,48 @@ class BudgetController extends Controller
             ->with('category')
             ->where('month', $selectedMonth)
             ->latest()
-            ->get()
-            ->map(function ($budget) use ($user, $selectedMonth) {
-                $usedAmount = $user->transactions()
-                    ->where('type', 'expense')
-                    ->where('category_id', $budget->category_id)
-                    ->whereYear('transaction_date', substr($selectedMonth, 0, 4))
-                    ->whereMonth('transaction_date', substr($selectedMonth, 5, 2))
-                    ->sum('amount');
+            ->get();
 
-                $amount = (float) $budget->amount;
-                $used = (float) $usedAmount;
-                $remaining = $amount - $used;
-                $percentage = $amount > 0 ? min(round(($used / $amount) * 100), 999) : 0;
+        $categoryIds = $budgets->pluck('category_id');
 
-                $status = 'safe';
+        $usedPerCategory = $user->transactions()
+            ->where('type', 'expense')
+            ->whereIn('category_id', $categoryIds)
+            ->whereYear('transaction_date', $date->year)
+            ->whereMonth('transaction_date', $date->month)
+            ->selectRaw('category_id, SUM(amount) as total')
+            ->groupBy('category_id')
+            ->pluck('total', 'category_id');
 
-                if ($percentage >= 100) {
-                    $status = 'over';
-                } elseif ($percentage >= 80) {
-                    $status = 'warning';
-                }
+        $budgets = $budgets->map(function ($budget) use ($usedPerCategory) {
+            $amount = (float) $budget->amount;
+            $used = (float) ($usedPerCategory[$budget->category_id] ?? 0);
+            $remaining = $amount - $used;
+            $percentage = $amount > 0 ? min(round(($used / $amount) * 100), 999) : 0;
 
-                return [
-                    'id' => $budget->id,
-                    'category_id' => $budget->category_id,
-                    'category_name' => $budget->category->name ?? '-',
-                    'category_color' => $budget->category->color ?? '#6366f1',
-                    'month' => $budget->month,
-                    'amount' => $amount,
-                    'used_amount' => $used,
-                    'remaining_amount' => $remaining,
-                    'percentage' => $percentage,
-                    'status' => $status,
-                    'description' => $budget->description,
-                    'created_at' => $budget->created_at,
-                ];
-            });
+            $status = 'safe';
+
+            if ($percentage >= 100) {
+                $status = 'over';
+            } elseif ($percentage >= 80) {
+                $status = 'warning';
+            }
+
+            return [
+                'id' => $budget->id,
+                'category_id' => $budget->category_id,
+                'category_name' => $budget->category->name ?? '-',
+                'category_color' => $budget->category->color ?? '#6366f1',
+                'month' => $budget->month,
+                'amount' => $amount,
+                'used_amount' => $used,
+                'remaining_amount' => $remaining,
+                'percentage' => $percentage,
+                'status' => $status,
+                'description' => $budget->description,
+                'created_at' => $budget->created_at,
+            ];
+        });
 
         $categories = $user->categories()
             ->where('type', 'expense')
@@ -70,7 +78,6 @@ class BudgetController extends Controller
         $totalBudget = (float) $budgets->sum('amount');
         $totalUsed = (float) $budgets->sum('used_amount');
         $totalRemaining = $totalBudget - $totalUsed;
-
         $unallocatedBalance = $totalAccountBalance - $totalBudget;
 
         $totalPercentage = $totalBudget > 0
