@@ -11,6 +11,7 @@ import {
     ArchiveRestore,
     Repeat2,
     Target,
+    Repeat,
 } from 'lucide-vue-next';
 import { computed } from 'vue';
 
@@ -61,6 +62,11 @@ const mainNavItems = computed<NavItem[]>(() => {
             title: 'Transfer',
             href: '/transfers',
             icon: Repeat2,
+        },
+        {
+            title: 'Transaksi Berulang',
+            href: '/recurring-transactions',
+            icon: Repeat,
         },
         {
             title: 'Target Tabungan',

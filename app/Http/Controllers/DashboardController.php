@@ -99,6 +99,18 @@ class DashboardController extends Controller
         $savingGoalsSummary = $this->getSavingGoalsSummary($user);
         $activeSavingGoals = $this->getActiveSavingGoals($user);
 
+        // Recurring Transactions Summary
+        $recurringSummary = $this->getRecurringSummary($user);
+        $dueRecurringTransactions = $this->getDueRecurringTransactions($user);
+        $upcomingRecurringTransactions = $this->getUpcomingRecurringTransactions($user);
+
+        // Dashboard Notifications
+        $dashboardNotifications = $this->getDashboardNotifications(
+            $user,
+            $budgetSummary,
+            $dueRecurringTransactions
+        );
+
         return Inertia::render('Dashboard', [
             'totalBalance' => $totalBalance,
             'monthlyIncome' => $monthlyIncome,
@@ -113,9 +125,220 @@ class DashboardController extends Controller
             'budgetSummary' => $budgetSummary,
             'savingGoalsSummary' => $savingGoalsSummary,
             'activeSavingGoals' => $activeSavingGoals,
+            'recurringSummary' => $recurringSummary,
+            'dueRecurringTransactions' => $dueRecurringTransactions,
+            'upcomingRecurringTransactions' => $upcomingRecurringTransactions,
+            'dashboardNotifications' => $dashboardNotifications,
         ]);
     }
 
+    private function getRecurringSummary($user): array
+    {
+        $recurring = $user->recurringTransactions();
+
+        $total = (int) (clone $recurring)->count();
+        $active = (int) (clone $recurring)->where('is_active', true)->count();
+        $inactive = (int) (clone $recurring)->where('is_active', false)->count();
+
+        $incomeTotal = (float) (clone $recurring)
+            ->where('is_active', true)
+            ->where('type', 'income')
+            ->sum('amount');
+
+        $expenseTotal = (float) (clone $recurring)
+            ->where('is_active', true)
+            ->where('type', 'expense')
+            ->sum('amount');
+
+        $dueCount = (int) (clone $recurring)
+            ->where('is_active', true)
+            ->whereDate('next_date', '<=', now()->toDateString())
+            ->count();
+
+        return [
+            'total' => $total,
+            'active' => $active,
+            'inactive' => $inactive,
+            'dueCount' => $dueCount,
+            'incomeTotal' => $incomeTotal,
+            'expenseTotal' => $expenseTotal,
+            'netTotal' => $incomeTotal - $expenseTotal,
+        ];
+    }
+
+    private function getDueRecurringTransactions($user)
+    {
+        return $user->recurringTransactions()
+            ->with(['account', 'category'])
+            ->where('is_active', true)
+            ->whereDate('next_date', '<=', now()->toDateString())
+            ->orderBy('next_date')
+            ->limit(5)
+            ->get()
+            ->map(function ($recurring) {
+                return [
+                    'id' => $recurring->id,
+                    'title' => $recurring->title,
+                    'type' => $recurring->type,
+                    'type_label' => $recurring->type_label,
+                    'amount' => (float) $recurring->amount,
+                    'frequency' => $recurring->frequency,
+                    'frequency_label' => $recurring->frequency_label,
+                    'next_date' => $recurring->next_date,
+                    'account_name' => $recurring->account->name ?? '-',
+                    'category_name' => $recurring->category->name ?? '-',
+                    'category_color' => $recurring->category->color ?? '#6366f1',
+                    'description' => $recurring->description,
+                ];
+            });
+    }
+
+    private function getUpcomingRecurringTransactions($user)
+    {
+        return $user->recurringTransactions()
+            ->with(['account', 'category'])
+            ->where('is_active', true)
+            ->whereDate('next_date', '>=', now()->toDateString())
+            ->orderBy('next_date')
+            ->limit(5)
+            ->get()
+            ->map(function ($recurring) {
+                return [
+                    'id' => $recurring->id,
+                    'title' => $recurring->title,
+                    'type' => $recurring->type,
+                    'type_label' => $recurring->type_label,
+                    'amount' => (float) $recurring->amount,
+                    'frequency' => $recurring->frequency,
+                    'frequency_label' => $recurring->frequency_label,
+                    'next_date' => $recurring->next_date,
+                    'account_name' => $recurring->account->name ?? '-',
+                    'category_name' => $recurring->category->name ?? '-',
+                    'category_color' => $recurring->category->color ?? '#6366f1',
+                    'description' => $recurring->description,
+                ];
+            });
+    }
+
+    private function getDashboardNotifications($user, array $budgetSummary, $dueRecurringTransactions): array
+    {
+        $notifications = collect();
+
+        /**
+         * 1. Notifikasi Budget
+         */
+        collect($budgetSummary['warnings'] ?? [])->each(function ($budget) use ($notifications) {
+            $isOver = ($budget['status'] ?? '') === 'over';
+
+            $notifications->push([
+                'id' => 'budget-' . $budget['id'],
+                'type' => 'budget',
+                'severity' => $isOver ? 'danger' : 'warning',
+                'title' => $isOver ? 'Budget Melebihi Limit' : 'Budget Hampir Habis',
+                'message' => ($budget['category_name'] ?? 'Kategori') .
+                    ' sudah terpakai ' .
+                    ($budget['percentage'] ?? 0) .
+                    '% dari budget.',
+                'amount' => (float) ($budget['used_amount'] ?? 0),
+                'href' => '/budgets',
+                'date' => now()->toDateString(),
+            ]);
+        });
+
+        /**
+         * 2. Notifikasi Target Tabungan
+         */
+        $user->savingGoals()
+            ->where('status', 'active')
+            ->get()
+            ->each(function ($goal) use ($notifications) {
+                $targetAmount = (float) $goal->target_amount;
+                $currentAmount = (float) $goal->current_amount;
+
+                if ($targetAmount <= 0) {
+                    return;
+                }
+
+                $progress = min(round(($currentAmount / $targetAmount) * 100), 100);
+                $isAlmostDone = $progress >= 80;
+                $isNearDeadline = $goal->target_date
+                    && Carbon::parse($goal->target_date)->lte(now()->addDays(7));
+
+                if (!$isAlmostDone && !$isNearDeadline) {
+                    return;
+                }
+
+                $notifications->push([
+                    'id' => 'goal-' . $goal->id,
+                    'type' => 'saving_goal',
+                    'severity' => $isAlmostDone ? 'success' : 'warning',
+                    'title' => $isAlmostDone ? 'Target Hampir Tercapai' : 'Deadline Target Dekat',
+                    'message' => $goal->title . ' sudah mencapai ' . $progress . '% dari target.',
+                    'amount' => $currentAmount,
+                    'href' => '/saving-goals/' . $goal->id . '/edit',
+                    'date' => optional($goal->target_date)->toDateString(),
+                ]);
+            });
+
+        /**
+         * 3. Notifikasi Recurring Jatuh Tempo
+         */
+        collect($dueRecurringTransactions)->each(function ($recurring) use ($notifications) {
+            $notifications->push([
+                'id' => 'recurring-' . $recurring['id'],
+                'type' => 'recurring',
+                'severity' => 'warning',
+                'title' => 'Recurring Jatuh Tempo',
+                'message' => $recurring['title'] . ' sudah jatuh tempo untuk digenerate.',
+                'amount' => (float) $recurring['amount'],
+                'href' => '/recurring-transactions/' . $recurring['id'] . '/edit',
+                'date' => $recurring['next_date'],
+            ]);
+        });
+
+        /**
+         * 4. Notifikasi Saldo Akun Rendah
+         */
+        $lowBalanceLimit = 50000;
+
+        $user->financialAccounts()
+            ->where('is_active', true)
+            ->where('current_balance', '<=', $lowBalanceLimit)
+            ->orderBy('current_balance')
+            ->limit(5)
+            ->get()
+            ->each(function ($account) use ($notifications) {
+                $notifications->push([
+                    'id' => 'account-' . $account->id,
+                    'type' => 'account',
+                    'severity' => 'danger',
+                    'title' => 'Saldo Akun Rendah',
+                    'message' => 'Saldo akun ' . $account->name . ' sedang rendah.',
+                    'amount' => (float) $account->current_balance,
+                    'href' => '/financial-accounts',
+                    'date' => now()->toDateString(),
+                ]);
+            });
+
+        $severityOrder = [
+            'danger' => 1,
+            'warning' => 2,
+            'success' => 3,
+            'info' => 4,
+        ];
+
+        $items = $notifications
+            ->sortBy(fn($item) => $severityOrder[$item['severity']] ?? 99)
+            ->values();
+
+        return [
+            'total' => $items->count(),
+            'danger' => $items->where('severity', 'danger')->count(),
+            'warning' => $items->where('severity', 'warning')->count(),
+            'success' => $items->where('severity', 'success')->count(),
+            'items' => $items->take(8)->values(),
+        ];
+    }
     private function getSavingGoalsSummary($user): array
     {
         $goals = $user->savingGoals();
@@ -239,7 +462,7 @@ class DashboardController extends Controller
             'unallocatedBalance' => $unallocatedBalance,
             'totalPercentage' => $totalPercentage,
             'warnings' => $budgetItems
-                ->filter(fn ($item) => in_array($item['status'], ['warning', 'over']))
+                ->filter(fn($item) => in_array($item['status'], ['warning', 'over']))
                 ->values(),
             'items' => $budgetItems
                 ->sortByDesc('percentage')
@@ -296,7 +519,7 @@ class DashboardController extends Controller
         }
 
         return $years
-            ->map(fn ($year) => (int) $year)
+            ->map(fn($year) => (int) $year)
             ->toArray();
     }
 

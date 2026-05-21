@@ -15,6 +15,7 @@ use App\Http\Controllers\BackupController;
 use App\Http\Controllers\AccountTransferController;
 use App\Http\Controllers\SavingGoalController;
 use App\Http\Controllers\SavingGoalDepositController;
+use App\Http\Controllers\RecurringTransactionController;
 use Illuminate\Support\Facades\Route;
 
 Route::inertia('/', 'Welcome')->name('home');
@@ -106,6 +107,17 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::delete('saving-goal-deposits/{deposit}', [SavingGoalDepositController::class, 'destroy'])
         ->name('saving-goals.deposits.destroy');
+
+    // Recurring Transactions routes
+    Route::resource('recurring-transactions', RecurringTransactionController::class)
+        ->except(['show']);
+
+    Route::post('recurring-transactions/{recurringTransaction}/generate', [RecurringTransactionController::class, 'generate'])
+        ->name('recurring-transactions.generate');
+
+    Route::post('recurring-transactions-generate-due', [RecurringTransactionController::class, 'generateDue'])
+        ->name('recurring-transactions.generate-due');
+        
 });
 
 require __DIR__ . '/settings.php';

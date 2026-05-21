@@ -19,6 +19,10 @@ import {
     ReceiptText,
     Target,
     CheckCircle2,
+    Repeat2,
+    RefreshCcw,
+    Play,
+    Bell,
 } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
 
@@ -139,6 +143,50 @@ interface SavingGoalItem {
     description: string | null;
 }
 
+interface RecurringSummary {
+    total: number;
+    active: number;
+    inactive: number;
+    dueCount: number;
+    incomeTotal: number;
+    expenseTotal: number;
+    netTotal: number;
+}
+
+interface RecurringItem {
+    id: number;
+    title: string;
+    type: 'income' | 'expense';
+    type_label: string;
+    amount: number;
+    frequency: string;
+    frequency_label: string;
+    next_date: string;
+    account_name: string;
+    category_name: string;
+    category_color: string;
+    description: string | null;
+}
+
+interface DashboardNotificationItem {
+    id: string;
+    type: 'budget' | 'saving_goal' | 'recurring' | 'account' | string;
+    severity: 'danger' | 'warning' | 'success' | 'info' | string;
+    title: string;
+    message: string;
+    amount: number | null;
+    href: string;
+    date: string | null;
+}
+
+interface DashboardNotifications {
+    total: number;
+    danger: number;
+    warning: number;
+    success: number;
+    items: DashboardNotificationItem[];
+}
+
 interface Props {
     totalBalance: number;
     monthlyIncome: number;
@@ -153,6 +201,10 @@ interface Props {
     budgetSummary: BudgetSummary;
     savingGoalsSummary: SavingGoalSummary;
     activeSavingGoals: SavingGoalItem[];
+    recurringSummary: RecurringSummary;
+    dueRecurringTransactions: RecurringItem[];
+    upcomingRecurringTransactions: RecurringItem[];
+    dashboardNotifications: DashboardNotifications;
 }
 
 const props = defineProps<Props>();
@@ -200,6 +252,89 @@ const safeSavingGoalsSummary = computed<SavingGoalSummary>(() => {
 
 const safeActiveSavingGoals = computed<SavingGoalItem[]>(() => {
     return props.activeSavingGoals || [];
+});
+
+const generateDueProcessing = ref(false);
+
+const safeRecurringSummary = computed<RecurringSummary>(() => {
+    return (
+        props.recurringSummary || {
+            total: 0,
+            active: 0,
+            inactive: 0,
+            dueCount: 0,
+            incomeTotal: 0,
+            expenseTotal: 0,
+            netTotal: 0,
+        }
+    );
+});
+
+const safeDueRecurringTransactions = computed<RecurringItem[]>(() => {
+    return props.dueRecurringTransactions || [];
+});
+
+const safeUpcomingRecurringTransactions = computed<RecurringItem[]>(() => {
+    return props.upcomingRecurringTransactions || [];
+});
+
+const safeDashboardNotifications = computed<DashboardNotifications>(() => {
+    return (
+        props.dashboardNotifications || {
+            total: 0,
+            danger: 0,
+            warning: 0,
+            success: 0,
+            items: [],
+        }
+    );
+});
+
+const getNotificationSeverityClass = (severity: string) => {
+    if (severity === 'danger') {
+        return 'border-red-200 bg-red-50 text-red-700 dark:border-red-900 dark:bg-red-950/30 dark:text-red-300';
+    }
+
+    if (severity === 'warning') {
+        return 'border-yellow-200 bg-yellow-50 text-yellow-700 dark:border-yellow-900 dark:bg-yellow-950/30 dark:text-yellow-300';
+    }
+
+    if (severity === 'success') {
+        return 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-300';
+    }
+
+    return 'border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-900 dark:bg-blue-950/30 dark:text-blue-300';
+};
+
+const getNotificationIconClass = (severity: string) => {
+    if (severity === 'danger') {
+        return 'bg-red-100 text-red-600 dark:bg-red-950 dark:text-red-300';
+    }
+
+    if (severity === 'warning') {
+        return 'bg-yellow-100 text-yellow-600 dark:bg-yellow-950 dark:text-yellow-300';
+    }
+
+    if (severity === 'success') {
+        return 'bg-emerald-100 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-300';
+    }
+
+    return 'bg-blue-100 text-blue-600 dark:bg-blue-950 dark:text-blue-300';
+};
+
+const getNotificationTypeLabel = (type: string) => {
+    const labels: Record<string, string> = {
+        budget: 'Budget',
+        saving_goal: 'Target',
+        recurring: 'Recurring',
+        account: 'Akun',
+    };
+
+    return labels[type] || 'Info';
+};
+
+const hasRecurringData = computed(() => {
+    return safeRecurringSummary.value.total > 0;
 });
 
 const hasChartData = computed(() => {
@@ -297,6 +432,21 @@ const handleYearChange = (year: number) => {
         {
             preserveScroll: true,
             preserveState: true,
+        },
+    );
+};
+
+const generateDueRecurring = () => {
+    generateDueProcessing.value = true;
+
+    router.post(
+        '/recurring-transactions-generate-due',
+        {},
+        {
+            preserveScroll: true,
+            onFinish: () => {
+                generateDueProcessing.value = false;
+            },
         },
     );
 };
@@ -407,6 +557,22 @@ const getBudgetProgressClass = (status: string) => {
 
     return 'bg-emerald-500';
 };
+
+const getRecurringTypeClass = (type: string) => {
+    if (type === 'income') {
+        return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300';
+    }
+
+    return 'bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300';
+};
+
+const getRecurringAmountClass = (type: string) => {
+    if (type === 'income') {
+        return 'text-emerald-600 dark:text-emerald-400';
+    }
+
+    return 'text-red-600 dark:text-red-400';
+};
 </script>
 
 <template>
@@ -418,11 +584,14 @@ const getBudgetProgressClass = (status: string) => {
             class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
         >
             <div>
-                <h1 class="text-2xl font-bold text-gray-900 sm:text-3xl dark:text-white">
+                <h1
+                    class="text-2xl font-bold text-gray-900 sm:text-3xl dark:text-white"
+                >
                     Dashboard
                 </h1>
                 <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
-                    Ringkasan keuangan, budget, target tabungan, transaksi, akun, dan catatan terbaru.
+                    Ringkasan keuangan, budget, target tabungan, transaksi,
+                    akun, dan catatan terbaru.
                 </p>
             </div>
 
@@ -457,18 +626,21 @@ const getBudgetProgressClass = (status: string) => {
                 class="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"
             >
                 <div>
-                    <h2 class="text-lg font-semibold text-gray-900 dark:text-white">
+                    <h2
+                        class="text-lg font-semibold text-gray-900 dark:text-white"
+                    >
                         Aksi Cepat
                     </h2>
                     <p class="text-sm text-gray-500 dark:text-gray-400">
-                        Tambahkan data penting tanpa perlu membuka menu satu per satu.
+                        Tambahkan data penting tanpa perlu membuka menu satu per
+                        satu.
                     </p>
                 </div>
 
                 <Plus class="hidden h-5 w-5 text-gray-400 sm:block" />
             </div>
 
-            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
+            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-6">
                 <Link
                     href="/transactions/create"
                     class="group rounded-xl border border-gray-200 bg-gray-50 p-4 transition hover:border-emerald-200 hover:bg-emerald-50 dark:border-gray-800 dark:bg-gray-800 dark:hover:border-emerald-900 dark:hover:bg-emerald-950/30"
@@ -481,7 +653,9 @@ const getBudgetProgressClass = (status: string) => {
                         </div>
 
                         <div class="min-w-0">
-                            <p class="font-semibold text-gray-900 dark:text-white">
+                            <p
+                                class="font-semibold text-gray-900 dark:text-white"
+                            >
                                 Tambah Transaksi
                             </p>
                             <p class="text-xs text-gray-500 dark:text-gray-400">
@@ -503,7 +677,9 @@ const getBudgetProgressClass = (status: string) => {
                         </div>
 
                         <div class="min-w-0">
-                            <p class="font-semibold text-gray-900 dark:text-white">
+                            <p
+                                class="font-semibold text-gray-900 dark:text-white"
+                            >
                                 Tambah Budget
                             </p>
                             <p class="text-xs text-gray-500 dark:text-gray-400">
@@ -525,11 +701,37 @@ const getBudgetProgressClass = (status: string) => {
                         </div>
 
                         <div class="min-w-0">
-                            <p class="font-semibold text-gray-900 dark:text-white">
+                            <p
+                                class="font-semibold text-gray-900 dark:text-white"
+                            >
                                 Tambah Target
                             </p>
                             <p class="text-xs text-gray-500 dark:text-gray-400">
                                 Buat target tabungan
+                            </p>
+                        </div>
+                    </div>
+                </Link>
+
+                <Link
+                    href="/recurring-transactions/create"
+                    class="group rounded-xl border border-gray-200 bg-gray-50 p-4 transition hover:border-pink-200 hover:bg-pink-50 dark:border-gray-800 dark:bg-gray-800 dark:hover:border-pink-900 dark:hover:bg-pink-950/30"
+                >
+                    <div class="flex items-center gap-3">
+                        <div
+                            class="flex h-11 w-11 items-center justify-center rounded-xl bg-pink-100 text-pink-600 transition group-hover:bg-pink-600 group-hover:text-white dark:bg-pink-950 dark:text-pink-300"
+                        >
+                            <Repeat2 class="h-5 w-5" />
+                        </div>
+
+                        <div class="min-w-0">
+                            <p
+                                class="font-semibold text-gray-900 dark:text-white"
+                            >
+                                Tambah Recurring
+                            </p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400">
+                                Transaksi rutin
                             </p>
                         </div>
                     </div>
@@ -547,7 +749,9 @@ const getBudgetProgressClass = (status: string) => {
                         </div>
 
                         <div class="min-w-0">
-                            <p class="font-semibold text-gray-900 dark:text-white">
+                            <p
+                                class="font-semibold text-gray-900 dark:text-white"
+                            >
                                 Tambah Catatan
                             </p>
                             <p class="text-xs text-gray-500 dark:text-gray-400">
@@ -569,7 +773,9 @@ const getBudgetProgressClass = (status: string) => {
                         </div>
 
                         <div class="min-w-0">
-                            <p class="font-semibold text-gray-900 dark:text-white">
+                            <p
+                                class="font-semibold text-gray-900 dark:text-white"
+                            >
                                 Tambah Akun
                             </p>
                             <p class="text-xs text-gray-500 dark:text-gray-400">
@@ -588,10 +794,14 @@ const getBudgetProgressClass = (status: string) => {
             >
                 <div class="flex items-center justify-between">
                     <div>
-                        <p class="text-sm font-medium text-gray-500 dark:text-gray-400">
+                        <p
+                            class="text-sm font-medium text-gray-500 dark:text-gray-400"
+                        >
                             Total Saldo
                         </p>
-                        <p class="mt-2 text-2xl font-bold text-gray-900 dark:text-white">
+                        <p
+                            class="mt-2 text-2xl font-bold text-gray-900 dark:text-white"
+                        >
                             {{ formatCurrency(totalBalance) }}
                         </p>
                     </div>
@@ -613,10 +823,14 @@ const getBudgetProgressClass = (status: string) => {
             >
                 <div class="flex items-center justify-between">
                     <div>
-                        <p class="text-sm font-medium text-gray-500 dark:text-gray-400">
+                        <p
+                            class="text-sm font-medium text-gray-500 dark:text-gray-400"
+                        >
                             Pemasukan Bulan Ini
                         </p>
-                        <p class="mt-2 text-2xl font-bold text-emerald-600 dark:text-emerald-400">
+                        <p
+                            class="mt-2 text-2xl font-bold text-emerald-600 dark:text-emerald-400"
+                        >
                             {{ formatCurrency(monthlyIncome) }}
                         </p>
                     </div>
@@ -641,10 +855,14 @@ const getBudgetProgressClass = (status: string) => {
             >
                 <div class="flex items-center justify-between">
                     <div>
-                        <p class="text-sm font-medium text-gray-500 dark:text-gray-400">
+                        <p
+                            class="text-sm font-medium text-gray-500 dark:text-gray-400"
+                        >
                             Pengeluaran Bulan Ini
                         </p>
-                        <p class="mt-2 text-2xl font-bold text-red-600 dark:text-red-400">
+                        <p
+                            class="mt-2 text-2xl font-bold text-red-600 dark:text-red-400"
+                        >
                             {{ formatCurrency(monthlyExpense) }}
                         </p>
                     </div>
@@ -669,7 +887,9 @@ const getBudgetProgressClass = (status: string) => {
             >
                 <div class="flex items-center justify-between">
                     <div>
-                        <p class="text-sm font-medium text-gray-500 dark:text-gray-400">
+                        <p
+                            class="text-sm font-medium text-gray-500 dark:text-gray-400"
+                        >
                             Saldo Bersih
                         </p>
                         <p
@@ -697,6 +917,144 @@ const getBudgetProgressClass = (status: string) => {
             </div>
         </div>
 
+        <!-- Notification Center -->
+        <div
+            class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900"
+        >
+            <div
+                class="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+            >
+                <div class="flex items-center gap-3">
+                    <div
+                        class="flex h-10 w-10 items-center justify-center rounded-xl bg-orange-50 text-orange-600 dark:bg-orange-950 dark:text-orange-300"
+                    >
+                        <Bell class="h-5 w-5" />
+                    </div>
+
+                    <div>
+                        <h2
+                            class="text-lg font-semibold text-gray-900 dark:text-white"
+                        >
+                            Pusat Notifikasi
+                        </h2>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">
+                            Ringkasan peringatan budget, target tabungan,
+                            recurring, dan saldo akun.
+                        </p>
+                    </div>
+                </div>
+
+                <div
+                    v-if="safeDashboardNotifications.total > 0"
+                    class="flex flex-wrap gap-2"
+                >
+                    <span
+                        v-if="safeDashboardNotifications.danger > 0"
+                        class="rounded-full bg-red-100 px-3 py-1 text-xs font-medium text-red-700 dark:bg-red-950 dark:text-red-300"
+                    >
+                        {{ safeDashboardNotifications.danger }} Penting
+                    </span>
+
+                    <span
+                        v-if="safeDashboardNotifications.warning > 0"
+                        class="rounded-full bg-yellow-100 px-3 py-1 text-xs font-medium text-yellow-700 dark:bg-yellow-950 dark:text-yellow-300"
+                    >
+                        {{ safeDashboardNotifications.warning }} Peringatan
+                    </span>
+
+                    <span
+                        v-if="safeDashboardNotifications.success > 0"
+                        class="rounded-full bg-emerald-100 px-3 py-1 text-xs font-medium text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300"
+                    >
+                        {{ safeDashboardNotifications.success }} Progress Baik
+                    </span>
+                </div>
+            </div>
+
+            <EmptyState
+                v-if="safeDashboardNotifications.total <= 0"
+                :icon="CheckCircle2"
+                title="Tidak ada notifikasi"
+                description="Semua kondisi keuangan masih aman. Belum ada budget limit, target dekat deadline, recurring jatuh tempo, atau saldo rendah."
+                action-label="Lihat Dashboard"
+                action-href="/dashboard"
+            />
+
+            <div
+                v-else
+                class="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4"
+            >
+                <Link
+                    v-for="notification in safeDashboardNotifications.items"
+                    :key="notification.id"
+                    :href="notification.href"
+                    :class="[
+                        'rounded-xl border p-4 transition hover:shadow-sm',
+                        getNotificationSeverityClass(notification.severity),
+                    ]"
+                >
+                    <div class="mb-3 flex items-start justify-between gap-3">
+                        <div class="flex items-start gap-3">
+                            <div
+                                :class="[
+                                    'flex h-10 w-10 shrink-0 items-center justify-center rounded-xl',
+                                    getNotificationIconClass(
+                                        notification.severity,
+                                    ),
+                                ]"
+                            >
+                                <AlertTriangle
+                                    v-if="
+                                        notification.severity === 'danger' ||
+                                        notification.severity === 'warning'
+                                    "
+                                    class="h-5 w-5"
+                                />
+                                <CheckCircle2
+                                    v-else-if="
+                                        notification.severity === 'success'
+                                    "
+                                    class="h-5 w-5"
+                                />
+                                <Bell v-else class="h-5 w-5" />
+                            </div>
+
+                            <div class="min-w-0">
+                                <p class="text-sm font-semibold">
+                                    {{ notification.title }}
+                                </p>
+
+                                <p class="mt-1 line-clamp-2 text-xs opacity-80">
+                                    {{ notification.message }}
+                                </p>
+                            </div>
+                        </div>
+
+                        <span
+                            class="shrink-0 rounded-full bg-white/70 px-2 py-1 text-[11px] font-medium dark:bg-gray-900/60"
+                        >
+                            {{ getNotificationTypeLabel(notification.type) }}
+                        </span>
+                    </div>
+
+                    <div
+                        class="mt-3 flex items-center justify-between gap-3 text-xs opacity-80"
+                    >
+                        <span>
+                            {{ formatDate(notification.date) }}
+                        </span>
+
+                        <span
+                            v-if="notification.amount !== null"
+                            class="font-semibold"
+                        >
+                            {{ formatCurrency(notification.amount) }}
+                        </span>
+                    </div>
+                </Link>
+            </div>
+        </div>
+
         <!-- Budget Overview -->
         <div
             class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900"
@@ -712,7 +1070,9 @@ const getBudgetProgressClass = (status: string) => {
                     </div>
 
                     <div>
-                        <h2 class="text-lg font-semibold text-gray-900 dark:text-white">
+                        <h2
+                            class="text-lg font-semibold text-gray-900 dark:text-white"
+                        >
                             Budget Bulanan
                         </h2>
                         <p class="text-sm text-gray-500 dark:text-gray-400">
@@ -745,8 +1105,14 @@ const getBudgetProgressClass = (status: string) => {
                         <p class="text-sm text-gray-500 dark:text-gray-400">
                             Saldo Akun
                         </p>
-                        <p class="mt-2 text-xl font-bold text-gray-900 dark:text-white">
-                            {{ formatCurrency(safeBudgetSummary.totalAccountBalance) }}
+                        <p
+                            class="mt-2 text-xl font-bold text-gray-900 dark:text-white"
+                        >
+                            {{
+                                formatCurrency(
+                                    safeBudgetSummary.totalAccountBalance,
+                                )
+                            }}
                         </p>
                     </div>
 
@@ -754,7 +1120,9 @@ const getBudgetProgressClass = (status: string) => {
                         <p class="text-sm text-gray-500 dark:text-gray-400">
                             Budget
                         </p>
-                        <p class="mt-2 text-xl font-bold text-indigo-600 dark:text-indigo-400">
+                        <p
+                            class="mt-2 text-xl font-bold text-indigo-600 dark:text-indigo-400"
+                        >
                             {{ formatCurrency(safeBudgetSummary.totalBudget) }}
                         </p>
                     </div>
@@ -771,7 +1139,11 @@ const getBudgetProgressClass = (status: string) => {
                                     : 'text-red-600 dark:text-red-400',
                             ]"
                         >
-                            {{ formatCurrency(safeBudgetSummary.unallocatedBalance) }}
+                            {{
+                                formatCurrency(
+                                    safeBudgetSummary.unallocatedBalance,
+                                )
+                            }}
                         </p>
                     </div>
 
@@ -779,7 +1151,9 @@ const getBudgetProgressClass = (status: string) => {
                         <p class="text-sm text-gray-500 dark:text-gray-400">
                             Terpakai
                         </p>
-                        <p class="mt-2 text-xl font-bold text-red-600 dark:text-red-400">
+                        <p
+                            class="mt-2 text-xl font-bold text-red-600 dark:text-red-400"
+                        >
                             {{ formatCurrency(safeBudgetSummary.totalUsed) }}
                         </p>
                     </div>
@@ -796,7 +1170,9 @@ const getBudgetProgressClass = (status: string) => {
                                     : 'text-red-600 dark:text-red-400',
                             ]"
                         >
-                            {{ formatCurrency(safeBudgetSummary.totalRemaining) }}
+                            {{
+                                formatCurrency(safeBudgetSummary.totalRemaining)
+                            }}
                         </p>
                     </div>
                 </div>
@@ -809,24 +1185,37 @@ const getBudgetProgressClass = (status: string) => {
                         <span>{{ safeBudgetSummary.totalPercentage }}%</span>
                     </div>
 
-                    <div class="h-3 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800">
+                    <div
+                        class="h-3 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800"
+                    >
                         <div
                             class="h-full rounded-full transition-all"
                             :class="getBudgetProgressClass(budgetOverallStatus)"
                             :style="{
-                                width: Math.min(safeBudgetSummary.totalPercentage, 100) + '%',
+                                width:
+                                    Math.min(
+                                        safeBudgetSummary.totalPercentage,
+                                        100,
+                                    ) + '%',
                             }"
                         ></div>
                     </div>
                 </div>
 
                 <div
-                    v-if="safeBudgetSummary.warnings && safeBudgetSummary.warnings.length > 0"
+                    v-if="
+                        safeBudgetSummary.warnings &&
+                        safeBudgetSummary.warnings.length > 0
+                    "
                     class="rounded-xl border border-yellow-200 bg-yellow-50 p-4 dark:border-yellow-900 dark:bg-yellow-950/40"
                 >
                     <div class="mb-3 flex items-center gap-2">
-                        <AlertTriangle class="h-5 w-5 text-yellow-600 dark:text-yellow-300" />
-                        <h3 class="font-semibold text-yellow-800 dark:text-yellow-200">
+                        <AlertTriangle
+                            class="h-5 w-5 text-yellow-600 dark:text-yellow-300"
+                        />
+                        <h3
+                            class="font-semibold text-yellow-800 dark:text-yellow-200"
+                        >
                             Peringatan Budget
                         </h3>
                     </div>
@@ -838,11 +1227,14 @@ const getBudgetProgressClass = (status: string) => {
                             class="flex flex-col gap-2 rounded-lg bg-white p-3 text-sm sm:flex-row sm:items-center sm:justify-between dark:bg-gray-900"
                         >
                             <div>
-                                <p class="font-medium text-gray-900 dark:text-white">
+                                <p
+                                    class="font-medium text-gray-900 dark:text-white"
+                                >
                                     {{ budget.category_name }}
                                 </p>
                                 <p class="text-gray-500 dark:text-gray-400">
-                                    Terpakai {{ formatCurrency(budget.used_amount) }}
+                                    Terpakai
+                                    {{ formatCurrency(budget.used_amount) }}
                                     dari {{ formatCurrency(budget.amount) }}
                                 </p>
                             </div>
@@ -859,24 +1251,34 @@ const getBudgetProgressClass = (status: string) => {
                     </div>
                 </div>
 
-                <div class="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+                <div
+                    class="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3"
+                >
                     <div
                         v-for="budget in safeBudgetSummary.items"
                         :key="budget.id"
                         class="rounded-xl border border-gray-100 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-800"
                     >
-                        <div class="mb-3 flex items-center justify-between gap-2">
+                        <div
+                            class="mb-3 flex items-center justify-between gap-2"
+                        >
                             <div class="flex min-w-0 items-center gap-2">
                                 <div
                                     class="h-8 w-8 shrink-0 rounded-full"
-                                    :style="{ backgroundColor: budget.category_color }"
+                                    :style="{
+                                        backgroundColor: budget.category_color,
+                                    }"
                                 ></div>
 
                                 <div class="min-w-0">
-                                    <p class="truncate text-sm font-semibold text-gray-900 dark:text-white">
+                                    <p
+                                        class="truncate text-sm font-semibold text-gray-900 dark:text-white"
+                                    >
                                         {{ budget.category_name }}
                                     </p>
-                                    <p class="text-xs text-gray-500 dark:text-gray-400">
+                                    <p
+                                        class="text-xs text-gray-500 dark:text-gray-400"
+                                    >
                                         {{ budget.percentage }}% terpakai
                                     </p>
                                 </div>
@@ -892,16 +1294,25 @@ const getBudgetProgressClass = (status: string) => {
                             </span>
                         </div>
 
-                        <div class="mb-1 flex justify-between text-xs text-gray-500 dark:text-gray-400">
-                            <span>{{ formatCurrency(budget.used_amount) }}</span>
+                        <div
+                            class="mb-1 flex justify-between text-xs text-gray-500 dark:text-gray-400"
+                        >
+                            <span>{{
+                                formatCurrency(budget.used_amount)
+                            }}</span>
                             <span>{{ formatCurrency(budget.amount) }}</span>
                         </div>
 
-                        <div class="h-2 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
+                        <div
+                            class="h-2 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700"
+                        >
                             <div
                                 class="h-full rounded-full transition-all"
                                 :class="getBudgetProgressClass(budget.status)"
-                                :style="{ width: Math.min(budget.percentage, 100) + '%' }"
+                                :style="{
+                                    width:
+                                        Math.min(budget.percentage, 100) + '%',
+                                }"
                             ></div>
                         </div>
                     </div>
@@ -924,11 +1335,14 @@ const getBudgetProgressClass = (status: string) => {
                     </div>
 
                     <div>
-                        <h2 class="text-lg font-semibold text-gray-900 dark:text-white">
+                        <h2
+                            class="text-lg font-semibold text-gray-900 dark:text-white"
+                        >
                             Target Tabungan
                         </h2>
                         <p class="text-sm text-gray-500 dark:text-gray-400">
-                            Pantau progress dana darurat, laptop, liburan, atau target lainnya.
+                            Pantau progress dana darurat, laptop, liburan, atau
+                            target lainnya.
                         </p>
                     </div>
                 </div>
@@ -956,7 +1370,9 @@ const getBudgetProgressClass = (status: string) => {
                         <p class="text-sm text-gray-500 dark:text-gray-400">
                             Total Target
                         </p>
-                        <p class="mt-2 text-xl font-bold text-gray-900 dark:text-white">
+                        <p
+                            class="mt-2 text-xl font-bold text-gray-900 dark:text-white"
+                        >
                             {{ safeSavingGoalsSummary.totalGoals }}
                         </p>
                     </div>
@@ -965,7 +1381,9 @@ const getBudgetProgressClass = (status: string) => {
                         <p class="text-sm text-gray-500 dark:text-gray-400">
                             Target Aktif
                         </p>
-                        <p class="mt-2 text-xl font-bold text-blue-600 dark:text-blue-400">
+                        <p
+                            class="mt-2 text-xl font-bold text-blue-600 dark:text-blue-400"
+                        >
                             {{ safeSavingGoalsSummary.activeGoals }}
                         </p>
                     </div>
@@ -974,8 +1392,14 @@ const getBudgetProgressClass = (status: string) => {
                         <p class="text-sm text-gray-500 dark:text-gray-400">
                             Terkumpul
                         </p>
-                        <p class="mt-2 text-xl font-bold text-emerald-600 dark:text-emerald-400">
-                            {{ formatCurrency(safeSavingGoalsSummary.totalCollected) }}
+                        <p
+                            class="mt-2 text-xl font-bold text-emerald-600 dark:text-emerald-400"
+                        >
+                            {{
+                                formatCurrency(
+                                    safeSavingGoalsSummary.totalCollected,
+                                )
+                            }}
                         </p>
                     </div>
 
@@ -983,30 +1407,52 @@ const getBudgetProgressClass = (status: string) => {
                         <p class="text-sm text-gray-500 dark:text-gray-400">
                             Sisa Target
                         </p>
-                        <p class="mt-2 text-xl font-bold text-red-600 dark:text-red-400">
-                            {{ formatCurrency(safeSavingGoalsSummary.totalRemaining) }}
+                        <p
+                            class="mt-2 text-xl font-bold text-red-600 dark:text-red-400"
+                        >
+                            {{
+                                formatCurrency(
+                                    safeSavingGoalsSummary.totalRemaining,
+                                )
+                            }}
                         </p>
                     </div>
                 </div>
 
                 <div>
-                    <div class="mb-1 flex justify-between text-xs text-gray-500 dark:text-gray-400">
+                    <div
+                        class="mb-1 flex justify-between text-xs text-gray-500 dark:text-gray-400"
+                    >
                         <span>
                             Progress semua target:
-                            {{ formatCurrency(safeSavingGoalsSummary.totalCollected) }}
+                            {{
+                                formatCurrency(
+                                    safeSavingGoalsSummary.totalCollected,
+                                )
+                            }}
                             dari
-                            {{ formatCurrency(safeSavingGoalsSummary.totalTarget) }}
+                            {{
+                                formatCurrency(
+                                    safeSavingGoalsSummary.totalTarget,
+                                )
+                            }}
                         </span>
                         <span>
                             {{ safeSavingGoalsSummary.overallProgress }}%
                         </span>
                     </div>
 
-                    <div class="h-3 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800">
+                    <div
+                        class="h-3 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800"
+                    >
                         <div
                             class="h-full rounded-full bg-purple-500 transition-all"
                             :style="{
-                                width: Math.min(safeSavingGoalsSummary.overallProgress, 100) + '%',
+                                width:
+                                    Math.min(
+                                        safeSavingGoalsSummary.overallProgress,
+                                        100,
+                                    ) + '%',
                             }"
                         ></div>
                     </div>
@@ -1014,7 +1460,9 @@ const getBudgetProgressClass = (status: string) => {
 
                 <div>
                     <div class="mb-3 flex items-center justify-between">
-                        <h3 class="text-sm font-semibold text-gray-900 dark:text-white">
+                        <h3
+                            class="text-sm font-semibold text-gray-900 dark:text-white"
+                        >
                             Target Aktif Teratas
                         </h3>
 
@@ -1035,46 +1483,74 @@ const getBudgetProgressClass = (status: string) => {
                         action-href="/saving-goals/create"
                     />
 
-                    <div v-else class="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+                    <div
+                        v-else
+                        class="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3"
+                    >
                         <div
                             v-for="goal in safeActiveSavingGoals"
                             :key="goal.id"
                             class="rounded-xl border border-gray-100 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-800"
                         >
-                            <div class="mb-3 flex items-start justify-between gap-3">
+                            <div
+                                class="mb-3 flex items-start justify-between gap-3"
+                            >
                                 <div class="min-w-0">
-                                    <p class="truncate text-sm font-semibold text-gray-900 dark:text-white">
+                                    <p
+                                        class="truncate text-sm font-semibold text-gray-900 dark:text-white"
+                                    >
                                         {{ goal.title }}
                                     </p>
-                                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                                        Deadline: {{ formatDate(goal.target_date) }}
+                                    <p
+                                        class="mt-1 text-xs text-gray-500 dark:text-gray-400"
+                                    >
+                                        Deadline:
+                                        {{ formatDate(goal.target_date) }}
                                     </p>
                                 </div>
 
-                                <span class="shrink-0 rounded-full bg-blue-100 px-2 py-1 text-xs font-medium text-blue-700 dark:bg-blue-950 dark:text-blue-300">
+                                <span
+                                    class="shrink-0 rounded-full bg-blue-100 px-2 py-1 text-xs font-medium text-blue-700 dark:bg-blue-950 dark:text-blue-300"
+                                >
                                     {{ goal.progress_percentage }}%
                                 </span>
                             </div>
 
-                            <div class="mb-2 flex justify-between text-xs text-gray-500 dark:text-gray-400">
-                                <span>{{ formatCurrency(goal.current_amount) }}</span>
-                                <span>{{ formatCurrency(goal.target_amount) }}</span>
+                            <div
+                                class="mb-2 flex justify-between text-xs text-gray-500 dark:text-gray-400"
+                            >
+                                <span>{{
+                                    formatCurrency(goal.current_amount)
+                                }}</span>
+                                <span>{{
+                                    formatCurrency(goal.target_amount)
+                                }}</span>
                             </div>
 
-                            <div class="h-2 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
+                            <div
+                                class="h-2 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700"
+                            >
                                 <div
                                     class="h-full rounded-full bg-purple-500 transition-all"
                                     :style="{
-                                        width: Math.min(goal.progress_percentage, 100) + '%',
+                                        width:
+                                            Math.min(
+                                                goal.progress_percentage,
+                                                100,
+                                            ) + '%',
                                     }"
                                 ></div>
                             </div>
 
-                            <div class="mt-3 flex items-center justify-between gap-3 text-xs">
+                            <div
+                                class="mt-3 flex items-center justify-between gap-3 text-xs"
+                            >
                                 <span class="text-gray-500 dark:text-gray-400">
                                     Sisa
                                 </span>
-                                <span class="font-semibold text-red-600 dark:text-red-400">
+                                <span
+                                    class="font-semibold text-red-600 dark:text-red-400"
+                                >
                                     {{ formatCurrency(goal.remaining_amount) }}
                                 </span>
                             </div>
@@ -1091,6 +1567,345 @@ const getBudgetProgressClass = (status: string) => {
             </div>
         </div>
 
+        <!-- Recurring Transactions Overview -->
+        <div
+            class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900"
+        >
+            <div
+                class="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+            >
+                <div class="flex items-center gap-3">
+                    <div
+                        class="flex h-10 w-10 items-center justify-center rounded-xl bg-pink-50 text-pink-600 dark:bg-pink-950 dark:text-pink-300"
+                    >
+                        <Repeat2 class="h-5 w-5" />
+                    </div>
+
+                    <div>
+                        <h2
+                            class="text-lg font-semibold text-gray-900 dark:text-white"
+                        >
+                            Transaksi Berulang
+                        </h2>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">
+                            Pantau transaksi rutin seperti gaji, kos, listrik,
+                            cicilan, dan langganan.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
+                    <Button
+                        type="button"
+                        variant="outline"
+                        class="inline-flex items-center justify-center gap-2 whitespace-nowrap"
+                        :disabled="generateDueProcessing"
+                        @click="generateDueRecurring"
+                    >
+                        <RefreshCcw
+                            :class="[
+                                'h-4 w-4 shrink-0',
+                                generateDueProcessing ? 'animate-spin' : '',
+                            ]"
+                        />
+
+                        <span>
+                            {{
+                                generateDueProcessing
+                                    ? 'Memproses...'
+                                    : 'Generate Jatuh Tempo'
+                            }}
+                        </span>
+                    </Button>
+
+                    <Link
+                        href="/recurring-transactions"
+                        class="inline-flex items-center justify-center rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium whitespace-nowrap text-gray-700 transition hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
+                    >
+                        Kelola Recurring
+                    </Link>
+                </div>
+            </div>
+
+            <EmptyState
+                v-if="safeRecurringSummary.total <= 0"
+                :icon="Repeat2"
+                title="Belum ada transaksi berulang"
+                description="Buat transaksi rutin seperti gaji, kos, listrik, cicilan, atau langganan."
+                action-label="Tambah Recurring"
+                action-href="/recurring-transactions/create"
+            />
+
+            <div v-else class="space-y-5">
+                <!-- Summary -->
+                <div class="grid grid-cols-1 gap-4 md:grid-cols-5">
+                    <div class="rounded-xl bg-gray-50 p-4 dark:bg-gray-800">
+                        <p class="text-sm text-gray-500 dark:text-gray-400">
+                            Total
+                        </p>
+                        <p
+                            class="mt-2 text-xl font-bold text-gray-900 dark:text-white"
+                        >
+                            {{ safeRecurringSummary.total }}
+                        </p>
+                    </div>
+
+                    <div class="rounded-xl bg-gray-50 p-4 dark:bg-gray-800">
+                        <p class="text-sm text-gray-500 dark:text-gray-400">
+                            Aktif
+                        </p>
+                        <p
+                            class="mt-2 text-xl font-bold text-blue-600 dark:text-blue-400"
+                        >
+                            {{ safeRecurringSummary.active }}
+                        </p>
+                    </div>
+
+                    <div class="rounded-xl bg-gray-50 p-4 dark:bg-gray-800">
+                        <p class="text-sm text-gray-500 dark:text-gray-400">
+                            Jatuh Tempo
+                        </p>
+                        <p
+                            class="mt-2 text-xl font-bold text-orange-600 dark:text-orange-400"
+                        >
+                            {{ safeRecurringSummary.dueCount }}
+                        </p>
+                    </div>
+
+                    <div class="rounded-xl bg-gray-50 p-4 dark:bg-gray-800">
+                        <p class="text-sm text-gray-500 dark:text-gray-400">
+                            Pemasukan
+                        </p>
+                        <p
+                            class="mt-2 text-xl font-bold text-emerald-600 dark:text-emerald-400"
+                        >
+                            {{
+                                formatCurrency(safeRecurringSummary.incomeTotal)
+                            }}
+                        </p>
+                    </div>
+
+                    <div class="rounded-xl bg-gray-50 p-4 dark:bg-gray-800">
+                        <p class="text-sm text-gray-500 dark:text-gray-400">
+                            Pengeluaran
+                        </p>
+                        <p
+                            class="mt-2 text-xl font-bold text-red-600 dark:text-red-400"
+                        >
+                            {{
+                                formatCurrency(
+                                    safeRecurringSummary.expenseTotal,
+                                )
+                            }}
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Net -->
+                <div class="rounded-xl bg-muted/40 p-4">
+                    <div
+                        class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"
+                    >
+                        <div>
+                            <p class="text-sm text-muted-foreground">
+                                Estimasi saldo bersih recurring aktif
+                            </p>
+                            <p
+                                :class="[
+                                    'mt-1 text-2xl font-bold',
+                                    safeRecurringSummary.netTotal >= 0
+                                        ? 'text-emerald-600 dark:text-emerald-400'
+                                        : 'text-red-600 dark:text-red-400',
+                                ]"
+                            >
+                                {{
+                                    formatCurrency(
+                                        safeRecurringSummary.netTotal,
+                                    )
+                                }}
+                            </p>
+                        </div>
+
+                        <p class="text-sm text-muted-foreground">
+                            Pemasukan aktif - pengeluaran aktif
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Due Recurring -->
+                <div
+                    v-if="safeDueRecurringTransactions.length > 0"
+                    class="rounded-xl border border-orange-200 bg-orange-50 p-4 dark:border-orange-900 dark:bg-orange-950/30"
+                >
+                    <div class="mb-3 flex items-center gap-2">
+                        <Clock3
+                            class="h-5 w-5 text-orange-600 dark:text-orange-300"
+                        />
+                        <h3
+                            class="font-semibold text-orange-800 dark:text-orange-200"
+                        >
+                            Recurring Jatuh Tempo
+                        </h3>
+                    </div>
+
+                    <div
+                        class="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3"
+                    >
+                        <div
+                            v-for="item in safeDueRecurringTransactions"
+                            :key="item.id"
+                            class="rounded-xl bg-white p-4 dark:bg-gray-900"
+                        >
+                            <div
+                                class="mb-3 flex items-start justify-between gap-3"
+                            >
+                                <div class="min-w-0">
+                                    <p
+                                        class="truncate text-sm font-semibold text-gray-900 dark:text-white"
+                                    >
+                                        {{ item.title }}
+                                    </p>
+                                    <p
+                                        class="mt-1 text-xs text-gray-500 dark:text-gray-400"
+                                    >
+                                        {{ item.account_name }} •
+                                        {{ item.category_name }}
+                                    </p>
+                                </div>
+
+                                <span
+                                    :class="[
+                                        'shrink-0 rounded-full px-2 py-1 text-xs font-medium',
+                                        getRecurringTypeClass(item.type),
+                                    ]"
+                                >
+                                    {{ item.type_label }}
+                                </span>
+                            </div>
+
+                            <p
+                                :class="[
+                                    'text-lg font-bold',
+                                    item.type === 'income'
+                                        ? 'text-emerald-600 dark:text-emerald-400'
+                                        : 'text-red-600 dark:text-red-400',
+                                ]"
+                            >
+                                {{ item.type === 'income' ? '+' : '-' }}
+                                {{ formatCurrency(item.amount) }}
+                            </p>
+
+                            <div
+                                class="mt-3 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400"
+                            >
+                                <span>{{ item.frequency_label }}</span>
+                                <span>{{ formatDate(item.next_date) }}</span>
+                            </div>
+
+                            <Link
+                                :href="`/recurring-transactions/${item.id}/edit`"
+                                class="mt-3 inline-flex w-full items-center justify-center rounded-lg border border-orange-200 px-3 py-2 text-sm font-medium text-orange-700 transition hover:bg-orange-100 dark:border-orange-900 dark:text-orange-300 dark:hover:bg-orange-950"
+                            >
+                                <Play class="mr-2 h-4 w-4" />
+                                Buka Detail
+                            </Link>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Upcoming Recurring -->
+                <div>
+                    <div class="mb-3 flex items-center justify-between">
+                        <h3
+                            class="text-sm font-semibold text-gray-900 dark:text-white"
+                        >
+                            Recurring Terdekat
+                        </h3>
+
+                        <Link
+                            href="/recurring-transactions/create"
+                            class="text-sm font-medium text-indigo-600 hover:text-indigo-700 dark:text-indigo-400"
+                        >
+                            Tambah Recurring
+                        </Link>
+                    </div>
+
+                    <EmptyState
+                        v-if="safeUpcomingRecurringTransactions.length === 0"
+                        :icon="Repeat2"
+                        title="Tidak ada recurring aktif"
+                        description="Belum ada transaksi berulang yang aktif atau terjadwal."
+                        action-label="Tambah Recurring"
+                        action-href="/recurring-transactions/create"
+                    />
+
+                    <div
+                        v-else
+                        class="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3"
+                    >
+                        <div
+                            v-for="item in safeUpcomingRecurringTransactions"
+                            :key="item.id"
+                            class="rounded-xl border border-gray-100 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-800"
+                        >
+                            <div
+                                class="mb-3 flex items-start justify-between gap-3"
+                            >
+                                <div class="min-w-0">
+                                    <p
+                                        class="truncate text-sm font-semibold text-gray-900 dark:text-white"
+                                    >
+                                        {{ item.title }}
+                                    </p>
+                                    <p
+                                        class="mt-1 text-xs text-gray-500 dark:text-gray-400"
+                                    >
+                                        {{ item.account_name }} •
+                                        {{ item.category_name }}
+                                    </p>
+                                </div>
+
+                                <span
+                                    :class="[
+                                        'shrink-0 rounded-full px-2 py-1 text-xs font-medium',
+                                        getRecurringTypeClass(item.type),
+                                    ]"
+                                >
+                                    {{ item.type_label }}
+                                </span>
+                            </div>
+
+                            <p
+                                :class="[
+                                    'text-lg font-bold',
+                                    item.type === 'income'
+                                        ? 'text-emerald-600 dark:text-emerald-400'
+                                        : 'text-red-600 dark:text-red-400',
+                                ]"
+                            >
+                                {{ item.type === 'income' ? '+' : '-' }}
+                                {{ formatCurrency(item.amount) }}
+                            </p>
+
+                            <div
+                                class="mt-3 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400"
+                            >
+                                <span>{{ item.frequency_label }}</span>
+                                <span>{{ formatDate(item.next_date) }}</span>
+                            </div>
+
+                            <Link
+                                :href="`/recurring-transactions/${item.id}/edit`"
+                                class="mt-3 inline-flex w-full justify-center rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 transition hover:bg-white dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-900"
+                            >
+                                Edit Recurring
+                            </Link>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Main Chart -->
         <div
             class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900"
@@ -1099,7 +1914,9 @@ const getBudgetProgressClass = (status: string) => {
                 class="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
             >
                 <div>
-                    <h2 class="text-lg font-semibold text-gray-900 dark:text-white">
+                    <h2
+                        class="text-lg font-semibold text-gray-900 dark:text-white"
+                    >
                         Pemasukan vs Pengeluaran
                     </h2>
                     <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
@@ -1142,7 +1959,9 @@ const getBudgetProgressClass = (status: string) => {
                             >
                                 <FileText class="h-5 w-5" />
                             </div>
-                            <h2 class="text-lg font-semibold text-gray-900 dark:text-white">
+                            <h2
+                                class="text-lg font-semibold text-gray-900 dark:text-white"
+                            >
                                 Transaksi Terbaru
                             </h2>
                         </div>
@@ -1172,20 +1991,31 @@ const getBudgetProgressClass = (status: string) => {
                         >
                             <div class="flex min-w-0 flex-1 items-center gap-3">
                                 <div
-                                    :style="{ backgroundColor: getTransactionColor(transaction) }"
+                                    :style="{
+                                        backgroundColor:
+                                            getTransactionColor(transaction),
+                                    }"
                                     class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-semibold text-white"
                                 >
                                     {{ getTransactionInitial(transaction) }}
                                 </div>
 
                                 <div class="min-w-0">
-                                    <p class="truncate text-sm font-medium text-gray-900 dark:text-white">
+                                    <p
+                                        class="truncate text-sm font-medium text-gray-900 dark:text-white"
+                                    >
                                         {{ transaction.category_name || '-' }}
                                     </p>
-                                    <p class="truncate text-xs text-gray-500 dark:text-gray-400">
+                                    <p
+                                        class="truncate text-xs text-gray-500 dark:text-gray-400"
+                                    >
                                         {{ transaction.account_name || '-' }}
                                         •
-                                        {{ formatDate(transaction.transaction_date) }}
+                                        {{
+                                            formatDate(
+                                                transaction.transaction_date,
+                                            )
+                                        }}
                                     </p>
                                 </div>
                             </div>
@@ -1217,7 +2047,9 @@ const getBudgetProgressClass = (status: string) => {
                             >
                                 <Landmark class="h-5 w-5" />
                             </div>
-                            <h2 class="text-lg font-semibold text-gray-900 dark:text-white">
+                            <h2
+                                class="text-lg font-semibold text-gray-900 dark:text-white"
+                            >
                                 Akun Keuangan
                             </h2>
                         </div>
@@ -1245,8 +2077,12 @@ const getBudgetProgressClass = (status: string) => {
                             :key="account.id"
                             class="rounded-xl border border-gray-100 bg-gray-50 p-3 dark:border-gray-800 dark:bg-gray-800"
                         >
-                            <div class="mb-2 flex items-center justify-between gap-2">
-                                <p class="truncate text-sm font-medium text-gray-900 dark:text-white">
+                            <div
+                                class="mb-2 flex items-center justify-between gap-2"
+                            >
+                                <p
+                                    class="truncate text-sm font-medium text-gray-900 dark:text-white"
+                                >
                                     {{ account.name }}
                                 </p>
 
@@ -1257,11 +2093,15 @@ const getBudgetProgressClass = (status: string) => {
                                 </span>
                             </div>
 
-                            <p class="text-lg font-bold text-gray-900 dark:text-white">
+                            <p
+                                class="text-lg font-bold text-gray-900 dark:text-white"
+                            >
                                 {{ formatCurrency(account.current_balance) }}
                             </p>
 
-                            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                            <p
+                                class="mt-1 text-xs text-gray-500 dark:text-gray-400"
+                            >
                                 Saldo awal:
                                 {{ formatCurrency(account.initial_balance) }}
                             </p>
@@ -1282,7 +2122,9 @@ const getBudgetProgressClass = (status: string) => {
                     >
                         <NotebookText class="h-5 w-5" />
                     </div>
-                    <h2 class="text-lg font-semibold text-gray-900 dark:text-white">
+                    <h2
+                        class="text-lg font-semibold text-gray-900 dark:text-white"
+                    >
                         Catatan Terbaru
                     </h2>
                 </div>
@@ -1304,23 +2146,32 @@ const getBudgetProgressClass = (status: string) => {
                 action-href="/notes/create"
             />
 
-            <div v-else class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+            <div
+                v-else
+                class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3"
+            >
                 <div
                     v-for="note in recentNotes"
                     :key="note.id"
                     class="rounded-xl border border-yellow-100 bg-yellow-50 p-4 transition hover:shadow-sm dark:border-yellow-900/40 dark:bg-yellow-950/20"
                 >
                     <div class="mb-2 flex items-start justify-between gap-2">
-                        <h3 class="line-clamp-1 text-sm font-semibold text-gray-900 dark:text-white">
+                        <h3
+                            class="line-clamp-1 text-sm font-semibold text-gray-900 dark:text-white"
+                        >
                             {{ note.title }}
                         </h3>
 
-                        <span class="shrink-0 text-xs text-gray-500 dark:text-gray-400">
+                        <span
+                            class="shrink-0 text-xs text-gray-500 dark:text-gray-400"
+                        >
                             {{ formatDate(note.note_date) }}
                         </span>
                     </div>
 
-                    <p class="line-clamp-2 text-sm text-gray-700 dark:text-gray-300">
+                    <p
+                        class="line-clamp-2 text-sm text-gray-700 dark:text-gray-300"
+                    >
                         {{ truncateContent(note.content, 90) }}
                     </p>
 

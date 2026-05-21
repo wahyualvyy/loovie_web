@@ -75,4 +75,9 @@ class FinancialAccount extends Model
     {
         return $this->hasMany(SavingGoalDeposit::class);
     }
+
+    public function recurringTransactions()
+    {
+        return $this->hasMany(RecurringTransaction::class);
+    }
 }
